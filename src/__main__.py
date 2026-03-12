@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from sys import exit
 from pathlib import Path
 from os import getenv
@@ -120,6 +121,14 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
         if not merged_apk.exists():
             logging.error("Merged APK file not found")
             exit(1)
+
+        # Clean up filename: remove build number like (1575420) and -1575420
+        clean_name = re.sub(r'\(\d+\)', '', merged_apk.name)  # Remove (1575420)
+        clean_name = re.sub(r'-\d+_', '_', clean_name)  # Remove -1575420_ -> _
+        if clean_name != merged_apk.name:
+            clean_apk = merged_apk.with_name(clean_name)
+            merged_apk.rename(clean_apk)
+            merged_apk = clean_apk
 
         input_apk = merged_apk
         logging.info(f"Merged APK file generated: {input_apk}")
