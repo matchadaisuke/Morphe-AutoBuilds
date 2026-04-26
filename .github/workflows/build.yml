@@ -70,10 +70,6 @@ on:
         description: 'Whether Dropped-Patches was updated'
         required: false
         default: 'true'
-      github_updated:
-        description: 'Whether GitHub-direct APKs were updated'
-        required: false
-        default: 'true'
       reuse_apks_json:
         description: 'JSON map of source -> APK asset URL to reuse (no rebuild needed)'
         required: false
@@ -151,7 +147,6 @@ jobs:
           UPD_TOSOX:    ${{ github.event.inputs.tosox_updated }}
           UPD_YUZU:     ${{ github.event.inputs.yuzu_updated }}
           UPD_DROPPED:  ${{ github.event.inputs.dropped_updated }}
-          UPD_GITHUB:   ${{ github.event.inputs.github_updated }}
         run: |
           # env: + run: is valid; env: + uses: is not (Actions parser error).
           python3 - <<'PYEOF'
@@ -165,7 +160,6 @@ jobs:
             'tosox':           os.environ.get('UPD_TOSOX',   'true'),
             'yuzu':            os.environ.get('UPD_YUZU',    'true'),
             'dropped':         os.environ.get('UPD_DROPPED', 'true'),
-            'github':          os.environ.get('UPD_GITHUB',   'true'),
           }
           all_items = json.load(open('./my-patch-config.json'))['patch_list']
           all_true = all(v == 'true' for v in upd.values())
@@ -373,7 +367,6 @@ jobs:
               *-tosox-*|*-revanced-patches-*)   echo "Tosox|$tosox_tag" ;;
               *-yuzu-*)                         echo "YuzuMikan404|$yuzu_tag" ;;
               *-dropped-*)                      echo "Dropped-Patches|$dropped_tag" ;;
-              *-github-*)                       echo "GitHub Direct|v1.0" ;;
               *)                                echo "Unknown|unknown" ;;
             esac
           }
@@ -420,7 +413,6 @@ jobs:
             emit_patch_row "Tosox"             "$tosox_tag"   "$tosox_updated"
             emit_patch_row "YuzuMikan404"      "$yuzu_tag"    "$yuzu_updated"
             emit_patch_row "Dropped-Patches"   "$dropped_tag" "$dropped_updated"
-            emit_patch_row "GitHub Direct"      "v1.0"         "${{ github.event.inputs.github_updated }}"
 
             echo ""
             echo "## Patch Sources"
@@ -433,7 +425,6 @@ jobs:
             echo "- **Tosox**: https://github.com/Tosox/revanced-patches/releases/tag/$tosox_tag"
             echo "- **YuzuMikan404**: https://github.com/YuzuMikan404/linegms-fork-second-/releases/tag/$yuzu_tag"
             echo "- **Dropped-Patches**: https://github.com/indrastorms/Dropped-Patches/releases/tag/$dropped_tag"
-            echo "- **GitHub Direct (YuzuMikan404)**: https://github.com/YuzuMikan404/Yuucho-Tuucho-and-Ninsho/releases/tag/v1.0"
             echo ""
             echo "## Notes"
             echo ""

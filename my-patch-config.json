@@ -70,11 +70,11 @@
         },
         {
             "app_name": "yuucho-tsucho",
-            "source": "github"
+            "source": "yuzu"
         },
         {
             "app_name": "yuucho-ninsho",
-            "source": "github"
+            "source": "yuzu"
         },
         {
             "app_name": "disney-plus",
