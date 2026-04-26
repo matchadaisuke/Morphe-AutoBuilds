@@ -1,4 +1,0 @@
-PyGithub
-beautifulsoup4
-lxml
-curl-cffi

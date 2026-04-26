@@ -1,0 +1,15 @@
+[
+    {
+        "name": "revanced-patches"
+    },
+    {
+        "user": "revanced",
+        "repo": "revanced-cli",
+        "tag": "latest"
+    },
+    {
+        "user": "YuzuMikan404",
+        "repo": "linegms-fork-second-",
+        "tag": "latest"
+    }
+]
