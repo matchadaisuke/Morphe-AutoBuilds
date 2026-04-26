@@ -288,10 +288,13 @@ jobs:
           
           echo "Creating release: $release_tag"
           
+          # Delete existing release/tag with the same name if it exists, then recreate
+          gh release delete "$release_tag" --yes 2>/dev/null || true
+          git push --delete origin "refs/tags/$release_tag" 2>/dev/null || true
+
           gh release create "$release_tag" \
             --title "Morphe AutoBuilds $release_tag" \
             --notes-file release_notes.md \
-            --clobber \
             ./release-apks/*.apk
           
           echo "Release created successfully!"
