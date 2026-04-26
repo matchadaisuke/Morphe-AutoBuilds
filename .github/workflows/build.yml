@@ -59,17 +59,9 @@ jobs:
         run: |
           mkdir -p tools
           
-          echo "Downloading ReVanced CLI (inotia00 fork)..."
-          curl -L "https://github.com/inotia00/revanced-cli/releases/latest/download/revanced-cli-all.jar" \
-            -o tools/revanced-cli.jar 2>/dev/null || echo "ReVanced CLI download may have failed"
-          
           echo "Downloading Anddea Patches..."
           curl -L "https://github.com/anddea/revanced-patches/releases/latest/download/patches.jar" \
             -o tools/anddea-patches.jar 2>/dev/null || echo "Anddea Patches download may have failed"
-          
-          echo "Downloading ReVanced Integrations..."
-          curl -L "https://github.com/revanced/revanced-integrations/releases/latest/download/app-release-unsigned.apk" \
-            -o tools/integrations.apk 2>/dev/null || echo "ReVanced Integrations download may have failed"
       
       - name: Cache Tools
         uses: actions/cache@v4
@@ -216,10 +208,10 @@ jobs:
           anddea_updated="${{ github.event.inputs.anddea_updated }}"
           
           if [ -z "$morphe_tag" ]; then
-            morphe_tag=$(gh api repos/MorpheApp/morphe-patches/releases/latest --jq '.tag_name' 2>/dev/null || echo "latest")
+            morphe_tag=$(gh api "repos/MorpheApp/morphe-patches/releases?per_page=1" --jq '.[0].tag_name' 2>/dev/null || echo "latest")
           fi
           if [ -z "$anddea_tag" ]; then
-            anddea_tag=$(gh api repos/anddea/revanced-patches/releases/latest --jq '.tag_name' 2>/dev/null || echo "latest")
+            anddea_tag=$(gh api "repos/anddea/revanced-patches/releases?per_page=1" --jq '.[0].tag_name' 2>/dev/null || echo "latest")
           fi
           
           jst_time=$(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M JST')
@@ -275,8 +267,8 @@ jobs:
             echo ""
             echo "## Patch Sources"
             echo ""
-            echo "- **Official Morphe**: https://github.com/MorpheApp/morphe-patches/releases/tag/$morphe_tag"
-            echo "- **Anddea**: https://github.com/anddea/revanced-patches/releases/tag/$anddea_tag"
+            echo "- **Official Morphe**: https://github.com/MorpheApp/morphe-patches/releases/latest"
+            echo "- **Anddea**: https://github.com/anddea/revanced-patches/releases/latest"
             echo ""
             echo "## Notes"
             echo ""
@@ -286,12 +278,6 @@ jobs:
           } > release_notes.md
           
           echo "Release notes generated"
-      
-      - name: Generate README.md
-        if: steps.check-apks.outputs.skip_release == 'false'
-        run: |
-          python scripts/generate_readme.py > README_RELEASE.md
-          echo "README.md generated"
       
       - name: Create Release
         if: steps.check-apks.outputs.skip_release == 'false'
@@ -305,8 +291,7 @@ jobs:
           gh release create "$release_tag" \
             --title "Morphe AutoBuilds $release_tag" \
             --notes-file release_notes.md \
-            ./release-apks/*.apk \
-            README_RELEASE.md
+            ./release-apks/*.apk
           
           echo "Release created successfully!"
           echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/$release_tag"

@@ -267,8 +267,12 @@ def extract_filename(response, fallback_url=None) -> str:
 def detect_github_release(user: str, repo: str, tag: str) -> dict:
     repo_obj = gh.get_repo(f"{user}/{repo}")
 
-    if tag == "latest":
-        release = repo_obj.get_latest_release()
+    if tag in ["latest", "latest-tag"]:
+        # get_latest_release() excludes pre-releases; fetch all and pick newest
+        releases = list(repo_obj.get_releases())
+        if not releases:
+            raise ValueError(f"No releases found for {user}/{repo}")
+        release = max(releases, key=lambda x: x.created_at)
         logging.info(f"Fetched latest release: {release.tag_name}")
         return release.raw_data
 

@@ -22,8 +22,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get latest release tag from MorpheApp/morphe-patches
-          morphe_tag=$(gh api repos/MorpheApp/morphe-patches/releases/latest --jq '.tag_name' 2>/dev/null || echo "")
+          # /releases/latest excludes pre-releases; use /releases?per_page=1 instead
+          morphe_tag=$(gh api "repos/MorpheApp/morphe-patches/releases?per_page=1" --jq '.[0].tag_name' 2>/dev/null || echo "")
           
           if [ -z "$morphe_tag" ]; then
             echo "❌ Failed to fetch Morphe tag"
@@ -38,8 +38,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get latest release tag from anddea/revanced-patches
-          anddea_tag=$(gh api repos/anddea/revanced-patches/releases/latest --jq '.tag_name' 2>/dev/null || echo "")
+          # /releases/latest excludes pre-releases; use /releases?per_page=1 instead
+          anddea_tag=$(gh api "repos/anddea/revanced-patches/releases?per_page=1" --jq '.[0].tag_name' 2>/dev/null || echo "")
           
           if [ -z "$anddea_tag" ]; then
             echo "❌ Failed to fetch Anddea tag"
