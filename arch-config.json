@@ -1,4 +1,6 @@
-{
-  "youtube": { "arch": ["arm64-v8a"] },
-  "youtube-music": { "arch": ["arm64-v8a"] }
-}
+[
+  { "app_name": "youtube",       "source": "morphe",         "arches": ["arm64-v8a"] },
+  { "app_name": "youtube",       "source": "revanced-anddea","arches": ["arm64-v8a"] },
+  { "app_name": "youtube-music", "source": "morphe",         "arches": ["arm64-v8a"] },
+  { "app_name": "youtube-music", "source": "revanced-anddea","arches": ["arm64-v8a"] }
+]

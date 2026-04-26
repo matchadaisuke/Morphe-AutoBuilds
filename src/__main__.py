@@ -279,38 +279,43 @@ def main():
         exit(1)
 
     # Read arch-config.json
+    # Expected format: list of objects with "app_name", "source", "arches" keys
+    # Example: [{"app_name": "youtube", "source": "morphe", "arches": ["arm64-v8a"]}]
+    arches = ["universal"]  # default fallback
     arch_config_path = Path("arch-config.json")
     if arch_config_path.exists():
         with open(arch_config_path) as f:
             arch_config = json.load(f)
-        
-        # Find arches for this app
-        arches = ["universal"]  # default
-        for config in arch_config:
-            if config["app_name"] == app_name and config["source"] == source:
-                arches = config["arches"]
-                break
-        
-        # Build for each architecture
-        built_apks = []
-        for arch in arches:
-            logging.info(f"🔨 Building {app_name} for {arch} architecture...")
-            apk_path = run_build(app_name, source, arch)
-            if apk_path:
-                built_apks.append(apk_path)
-                print(f"✅ Built {arch} version: {Path(apk_path).name}")
-        
-        # Summary
-        print(f"\n🎯 Built {len(built_apks)} APK(s) for {app_name}:")
-        for apk in built_apks:
-            print(f"  📱 {Path(apk).name}")
-        
+
+        if not isinstance(arch_config, list):
+            logging.error(
+                "arch-config.json must be a JSON array. "
+                "Got %s instead. Falling back to universal build.",
+                type(arch_config).__name__,
+            )
+        else:
+            for entry in arch_config:
+                if not isinstance(entry, dict):
+                    continue
+                if entry.get("app_name") == app_name and entry.get("source") == source:
+                    arches = entry.get("arches") or entry.get("arch") or arches
+                    break
     else:
-        # Fallback to single universal build
         logging.warning("arch-config.json not found, building universal only")
-        apk_path = run_build(app_name, source, "universal")
+
+    # Build for each architecture
+    built_apks = []
+    for arch in arches:
+        logging.info(f"🔨 Building {app_name} for {arch} architecture...")
+        apk_path = run_build(app_name, source, arch)
         if apk_path:
-            print(f"🎯 Final APK path: {apk_path}")
+            built_apks.append(apk_path)
+            print(f"✅ Built {arch} version: {Path(apk_path).name}")
+
+    # Summary
+    print(f"\n🎯 Built {len(built_apks)} APK(s) for {app_name}:")
+    for apk in built_apks:
+        print(f"  📱 {Path(apk).name}")
 
 if __name__ == "__main__":
     main()
