@@ -7,7 +7,8 @@ from src import (
     session,
     uptodown,
     aptoide,
-    apkmirror
+    apkmirror,
+    github
 )
 
 def download_resource(url: str, name: str = None) -> Path:
@@ -122,7 +123,16 @@ def download_platform(app_name: str, platform: str, cli: str, patches: str, arch
             logging.info(f"🔗 {platform}: using direct_url for {app_name}")
             try:
                 filepath = download_resource(direct_url)
-                version = config.get("version") or "direct"
+                # Try to resolve version via platform module if possible
+                version = config.get("version")
+                if not version:
+                    try:
+                        platform_mod = globals().get(platform)
+                        if platform_mod and hasattr(platform_mod, "get_latest_version"):
+                            version = platform_mod.get_latest_version(app_name, config)
+                    except Exception:
+                        pass
+                version = version or "latest"
                 logging.info(f"✅ {platform}: downloaded {app_name} via direct_url -> {filepath.name}")
                 return filepath, version
             except Exception as e:
@@ -163,6 +173,9 @@ def download_platform(app_name: str, platform: str, cli: str, patches: str, arch
     except Exception as e:
         logging.error(f"❌ {platform}: unexpected error for {app_name}: {type(e).__name__}: {e}")
         return None, None
+
+def download_github(app_name: str, cli: str, patches: str, arch: str = None) -> tuple[Path | None, str | None]:
+    return download_platform(app_name, "github", cli, patches, arch)
 
 def download_apkmirror(app_name: str, cli: str, patches: str, arch: str = None) -> tuple[Path | None, str | None]:
     return download_platform(app_name, "apkmirror", cli, patches, arch)
