@@ -1,5 +1,9 @@
 {
-    "direct_url": "https://download.adguardcdn.com/d/18675/adguard.apk",
+    "user": "AdguardTeam",
+    "repo": "AdguardForAndroid",
+    "tag": "latest",
+    "asset_pattern": "adguard-*.apk",
+    "asset_exclude": ".TV.",
     "package": "com.adguard.android",
     "version": ""
 }

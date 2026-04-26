@@ -364,8 +364,8 @@ jobs:
               *-piko-patches-*|*-piko-v*)       echo "Piko (crimera)|$piko_tag" ;;
               *-morphe-patches-hoo-*|*-hoo-*)   echo "Hoo-dles|$hoo_tag" ;;
               *-rookie-*|*De-ReVanced-*)        echo "RookieEnough|$rookie_tag" ;;
-              *-tosox-*|*-revanced-patches-*)   echo "Tosox|$tosox_tag" ;;
               *-yuzu-*)                         echo "YuzuMikan404|$yuzu_tag" ;;
+              *-tosox-*|*-revanced-patches-*)   echo "Tosox|$tosox_tag" ;;
               *-dropped-*)                      echo "Dropped-Patches|$dropped_tag" ;;
               *)                                echo "Unknown|unknown" ;;
             esac
@@ -383,7 +383,11 @@ jobs:
               [ -f "$apk" ] || continue
               filename=$(basename "$apk")
               app=$(get_app_name "$filename")
-              apk_version=$(echo "$filename" | grep -oP '(?<=-v)\d+[\d.]+(?=[^/]*\.apk)' | tail -1)
+              # Extract the LAST -vX.Y.Z segment before .apk — this is the APK version
+              # (not patch tag). Works for plain versions and rc/date suffixes like v26.5.1+rc1-2026.04.08
+              apk_version=$(echo "$filename" | grep -oP '(?<=-v)[^\-][^\s]*(?=\.apk$)' | tail -1)
+              # 'latest' is not a real version — show N/A instead
+              [ "$apk_version" = "latest" ] && apk_version=""
               patch_info=$(get_patch_info "$filename")
               source_label="${patch_info%%|*}"
               patch_ver="${patch_info##*|}"

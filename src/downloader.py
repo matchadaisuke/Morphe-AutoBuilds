@@ -136,8 +136,10 @@ def download_platform(app_name: str, platform: str, cli: str, patches: str, arch
             logging.info(f"🔗 {platform}: using direct_url for {app_name}")
             try:
                 filepath = download_resource(direct_url)
-                # Try to resolve version via platform module if possible
-                version = config.get("version")
+                # Try to resolve version: first check pinned version in config,
+                # then try the current platform's get_latest_version,
+                # then fall back to other platforms (apkmirror, apkpure, uptodown, aptoide)
+                version = config.get("version") or None
                 if not version:
                     try:
                         platform_mod = globals().get(platform)
@@ -145,8 +147,27 @@ def download_platform(app_name: str, platform: str, cli: str, patches: str, arch
                             version = platform_mod.get_latest_version(app_name, config)
                     except Exception:
                         pass
+                if not version:
+                    fallback_platforms = [p for p in ["apkmirror", "apkpure", "uptodown", "aptoide"] if p != platform]
+                    for fb_platform in fallback_platforms:
+                        fb_config_path = Path("apps") / fb_platform / f"{app_name}.json"
+                        if not fb_config_path.exists():
+                            continue
+                        try:
+                            import json as _json
+                            with fb_config_path.open() as _f:
+                                fb_config = _json.load(_f)
+                            fb_mod = globals().get(fb_platform)
+                            if fb_mod and hasattr(fb_mod, "get_latest_version"):
+                                version = fb_mod.get_latest_version(app_name, fb_config)
+                                if version:
+                                    logging.info(f"🔍 {platform}: resolved version {version} for {app_name} via {fb_platform} fallback")
+                                    break
+                        except Exception as e:
+                            logging.debug(f"direct_url version fallback via {fb_platform} failed: {e}")
+                            continue
                 version = version or "latest"
-                logging.info(f"✅ {platform}: downloaded {app_name} via direct_url -> {filepath.name}")
+                logging.info(f"✅ {platform}: downloaded {app_name} via direct_url -> {filepath.name} (version={version})")
                 return filepath, version
             except Exception as e:
                 logging.error(f"❌ {platform}: direct_url download failed for {app_name}: {type(e).__name__}: {e}")
