@@ -36,7 +36,7 @@ jobs:
           hoo_tag=$(fetch_tag     "hoo-dles/morphe-patches")
           rookie_tag=$(fetch_tag  "RookieEnough/De-ReVanced")
           tosox_tag=$(fetch_tag   "Tosox/revanced-patches")
-          yuzu_tag=$(fetch_tag    "YuzuMikan404/linegms-fork-second-")
+          yuzu_tag=$(fetch_tag    "YuzuMikan404/Yuucho-Tuucho-and-Ninsho")
           dropped_tag=$(fetch_tag "indrastorms/Dropped-Patches")
 
           for var in morphe anddea piko hoo rookie tosox yuzu dropped; do
@@ -100,12 +100,100 @@ jobs:
           echo "any_updated=$any_updated" >> $GITHUB_OUTPUT
 
       # ---------------------------------------------------------------
+      # Check APK versions for all apps (app version bump = rebuild)
+      # ---------------------------------------------------------------
+      - name: Check APK Versions
+        id: apkver
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pip install requests beautifulsoup4 PyGithub --quiet
+
+          python3 - <<'PYEOF'
+import json, os, sys, logging
+logging.basicConfig(level=logging.WARNING)
+
+# Load last known APK versions
+last = {}
+if os.path.exists("last-tags.json"):
+    with open("last-tags.json") as f:
+        last = json.load(f)
+
+# Load patch config to know which apps exist
+with open("my-patch-config.json") as f:
+    patch_list = json.load(f)["patch_list"]
+
+# Deduplicate app_names
+seen = set()
+apps = []
+for item in patch_list:
+    if item["app_name"] not in seen:
+        seen.add(item["app_name"])
+        apps.append(item["app_name"])
+
+from src import apkmirror, apkpure, uptodown, aptoide, github as github_mod
+
+platform_order = ["github", "apkmirror", "apkpure", "uptodown", "aptoide"]
+
+any_apk_updated = False
+apk_updated_apps = []
+
+github_output = open(os.environ["GITHUB_OUTPUT"], "a")
+
+for app in apps:
+    key = f"apk_{app}"
+    prev = last.get(key, "")
+
+    cur = None
+    for platform in platform_order:
+        import pathlib
+        config_path = pathlib.Path("apps") / platform / f"{app}.json"
+        if not config_path.exists():
+            continue
+        try:
+            with open(config_path) as f:
+                config = json.load(f)
+            mod_map = {
+                "github": github_mod,
+                "apkmirror": apkmirror,
+                "apkpure": apkpure,
+                "uptodown": uptodown,
+                "aptoide": aptoide,
+            }
+            mod = mod_map[platform]
+            ver = mod.get_latest_version(app, config)
+            if ver:
+                cur = str(ver)
+                break
+        except Exception as e:
+            continue
+
+    if cur is None:
+        print(f"⚠️  {app}: could not resolve APK version, skipping")
+        github_output.write(f"apkver_{app}=false\n")
+        continue
+
+    if cur != prev:
+        print(f"🆕 {app} APK updated: {prev!r} -> {cur!r}")
+        any_apk_updated = True
+        apk_updated_apps.append(app)
+        github_output.write(f"apkver_{app}=true\n")
+    else:
+        print(f"⏸️  {app} APK unchanged: {cur}")
+        github_output.write(f"apkver_{app}=false\n")
+
+github_output.write(f"any_apk_updated={str(any_apk_updated).lower()}\n")
+github_output.write(f"apk_updated_apps={json.dumps(apk_updated_apps)}\n")
+github_output.close()
+PYEOF
+
+      # ---------------------------------------------------------------
       # Build a JSON map of APK asset URLs for sources NOT updated,
       # so build.yml can reuse previous APKs instead of rebuilding.
       # ---------------------------------------------------------------
       - name: Collect Reusable APK URLs from Last Release
         id: reuse
-        if: steps.compare.outputs.any_updated == 'true'
+        if: steps.compare.outputs.any_updated == 'true' || steps.apkver.outputs.any_apk_updated == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           UPD_MORPHE:   ${{ steps.compare.outputs.morphe_updated }}
@@ -136,13 +224,27 @@ jobs:
             fi
           }
 
+          # 複数ファイルを個別キーで登録する関数（yuucho通帳・認証用）
+          maybe_reuse_each() {
+            local src="$1" updated="$2" pattern="$3"
+            if [ "$updated" = "false" ]; then
+              while IFS= read -r line; do
+                name=$(echo "$line" | jq -r '.name')
+                url=$(echo "$line" | jq -r '.browser_download_url')
+                key="${src}__${name%.apk}"
+                reuse_map=$(echo "$reuse_map" | jq -c --arg k "$key" --arg v "$url" '.[$k]=$v')
+                echo "  Reuse $key: $url"
+              done < <(echo "$assets_json" | jq -c                 --arg pat "$pattern"                 '.[] | select(.name | test($pat; "i"))' 2>/dev/null)
+            fi
+          }
+
           maybe_reuse morphe  "$UPD_MORPHE"   "-morphe-v"
           maybe_reuse anddea  "$UPD_ANDDEA"   "revanced-anddea"
           maybe_reuse piko    "$UPD_PIKO"     "-piko"
           maybe_reuse hoo     "$UPD_HOO"      "-hoo"
           maybe_reuse rookie  "$UPD_ROOKIE"   "-rookie"
           maybe_reuse tosox   "$UPD_TOSOX"    "-tosox"
-          maybe_reuse yuzu    "$UPD_YUZU"     "-yuzu"
+          maybe_reuse_each yuzu "$UPD_YUZU"   "yuucho"
           maybe_reuse dropped "$UPD_DROPPED"  "-dropped"
 
           echo "reuse_map=$reuse_map" >> $GITHUB_OUTPUT
@@ -151,11 +253,62 @@ jobs:
       # Trigger build only when at least one source was updated
       # ---------------------------------------------------------------
       - name: Trigger Build if Updates Found
-        if: steps.compare.outputs.any_updated == 'true'
+        if: steps.compare.outputs.any_updated == 'true' || steps.apkver.outputs.any_apk_updated == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          APK_UPDATED_APPS: ${{ steps.apkver.outputs.apk_updated_apps }}
         run: |
           echo "🚀 Triggering build workflow..."
+
+          # パッチ更新フラグ（比較結果ベース）
+          morphe_upd="${{ steps.compare.outputs.morphe_updated }}"
+          anddea_upd="${{ steps.compare.outputs.anddea_updated }}"
+          piko_upd="${{ steps.compare.outputs.piko_updated }}"
+          hoo_upd="${{ steps.compare.outputs.hoo_updated }}"
+          rookie_upd="${{ steps.compare.outputs.rookie_updated }}"
+          tosox_upd="${{ steps.compare.outputs.tosox_updated }}"
+          yuzu_upd="${{ steps.compare.outputs.yuzu_updated }}"
+          dropped_upd="${{ steps.compare.outputs.dropped_updated }}"
+
+          # APKバージョン更新があったアプリのsourceも updated=true に昇格
+          # (app_name -> source のマッピングをmy-patch-config.jsonから取得)
+          if [ -n "$APK_UPDATED_APPS" ] && [ "$APK_UPDATED_APPS" != "[]" ]; then
+            python3 - <<'PYEOF'
+import json, os, sys
+
+apps = json.loads(os.environ.get("APK_UPDATED_APPS", "[]"))
+with open("my-patch-config.json") as f:
+    patch_list = json.load(f)["patch_list"]
+
+# app_name -> sourceのマッピング
+app_to_sources = {}
+for item in patch_list:
+    app_to_sources.setdefault(item["app_name"], set()).add(item["source"])
+
+sources_to_force = set()
+for app in apps:
+    for src in app_to_sources.get(app, []):
+        sources_to_force.add(src)
+
+for src in sources_to_force:
+    # GitHub Actionsの環境変数として出力
+    varname = src.replace("-", "_").upper()
+    print(f"FORCE_{varname}=true")
+PYEOF
+          fi | while IFS= read -r line; do
+            eval "export $line"
+          done
+
+          # FORCE_* が true なら上書き
+          [ "${FORCE_MORPHE:-false}" = "true" ]          && morphe_upd=true
+          [ "${FORCE_REVANCED_ANDDEA:-false}" = "true" ] && anddea_upd=true
+          [ "${FORCE_PIKO:-false}" = "true" ]            && piko_upd=true
+          [ "${FORCE_HOO:-false}" = "true" ]             && hoo_upd=true
+          [ "${FORCE_ROOKIE:-false}" = "true" ]          && rookie_upd=true
+          [ "${FORCE_TOSOX:-false}" = "true" ]           && tosox_upd=true
+          [ "${FORCE_YUZU:-false}" = "true" ]            && yuzu_upd=true
+          [ "${FORCE_DROPPED:-false}" = "true" ]         && dropped_upd=true
 
           gh workflow run build.yml \
             -f morphe_tag="${{ steps.fetch.outputs.morphe_tag }}" \
@@ -166,14 +319,14 @@ jobs:
             -f tosox_tag="${{ steps.fetch.outputs.tosox_tag }}" \
             -f yuzu_tag="${{ steps.fetch.outputs.yuzu_tag }}" \
             -f dropped_tag="${{ steps.fetch.outputs.dropped_tag }}" \
-            -f morphe_updated="${{ steps.compare.outputs.morphe_updated }}" \
-            -f anddea_updated="${{ steps.compare.outputs.anddea_updated }}" \
-            -f piko_updated="${{ steps.compare.outputs.piko_updated }}" \
-            -f hoo_updated="${{ steps.compare.outputs.hoo_updated }}" \
-            -f rookie_updated="${{ steps.compare.outputs.rookie_updated }}" \
-            -f tosox_updated="${{ steps.compare.outputs.tosox_updated }}" \
-            -f yuzu_updated="${{ steps.compare.outputs.yuzu_updated }}" \
-            -f dropped_updated="${{ steps.compare.outputs.dropped_updated }}" \
+            -f morphe_updated="$morphe_upd" \
+            -f anddea_updated="$anddea_upd" \
+            -f piko_updated="$piko_upd" \
+            -f hoo_updated="$hoo_upd" \
+            -f rookie_updated="$rookie_upd" \
+            -f tosox_updated="$tosox_upd" \
+            -f yuzu_updated="$yuzu_upd" \
+            -f dropped_updated="$dropped_upd" \
             -f reuse_apks_json="${{ steps.reuse.outputs.reuse_map }}"
 
           echo "✅ Build workflow triggered"
@@ -182,7 +335,7 @@ jobs:
       # Persist updated tags to last-tags.json (updated sources only)
       # ---------------------------------------------------------------
       - name: Update Last Tags File
-        if: steps.compare.outputs.any_updated == 'true'
+        if: steps.compare.outputs.any_updated == 'true' || steps.apkver.outputs.any_apk_updated == 'true'
         env:
           UPD_MORPHE:   ${{ steps.compare.outputs.morphe_updated }}
           UPD_ANDDEA:   ${{ steps.compare.outputs.anddea_updated }}
@@ -220,7 +373,52 @@ jobs:
           update_if_changed yuzu    "$UPD_YUZU"     "$TAG_YUZU"
           update_if_changed dropped "$UPD_DROPPED"  "$TAG_DROPPED"
 
-          echo "$current" | jq '.' > last-tags.json
+          # APKバージョンが更新されたアプリも last-tags.json に記録
+          pip install requests beautifulsoup4 PyGithub --quiet 2>/dev/null
+
+          python3 - <<'PYEOF'
+import json, os, sys, logging, pathlib
+logging.basicConfig(level=logging.WARNING)
+
+with open("last-tags.json") as f:
+    current = json.load(f)
+
+with open("my-patch-config.json") as f:
+    patch_list = json.load(f)["patch_list"]
+
+seen = set()
+apps = []
+for item in patch_list:
+    if item["app_name"] not in seen:
+        seen.add(item["app_name"])
+        apps.append(item["app_name"])
+
+from src import apkmirror, apkpure, uptodown, aptoide, github as github_mod
+
+platform_order = ["github", "apkmirror", "apkpure", "uptodown", "aptoide"]
+mod_map = {"github": github_mod, "apkmirror": apkmirror, "apkpure": apkpure,
+           "uptodown": uptodown, "aptoide": aptoide}
+
+for app in apps:
+    key = f"apk_{app}"
+    for platform in platform_order:
+        config_path = pathlib.Path("apps") / platform / f"{app}.json"
+        if not config_path.exists():
+            continue
+        try:
+            with open(config_path) as f:
+                config = json.load(f)
+            ver = mod_map[platform].get_latest_version(app, config)
+            if ver:
+                current[key] = str(ver)
+                break
+        except Exception:
+            continue
+
+with open("last-tags.json", "w") as f:
+    json.dump(current, f, indent=2)
+print("APK versions saved to last-tags.json")
+PYEOF
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -231,7 +429,7 @@ jobs:
           echo "✅ last-tags.json updated and pushed"
 
       - name: Log – No Updates Found
-        if: steps.compare.outputs.any_updated == 'false'
+        if: steps.compare.outputs.any_updated == 'false' && steps.apkver.outputs.any_apk_updated == 'false'
         run: |
           echo "📭 No updates found across all sources. Skipping build."
           cat last-tags.json 2>/dev/null || echo "(last-tags.json not yet created)"
