@@ -2,7 +2,7 @@ name: Check Upstream for Updates
 
 on:
   schedule:
-    - cron: '0 6 * * *'  # Daily at 6 AM UTC
+    - cron: '0 6 * * *'
   workflow_dispatch:
 
 jobs:
@@ -17,10 +17,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # ---------------------------------------------------------------
-      # Fetch latest tags for every patch source
-      # All outputs written to GITHUB_OUTPUT as <src>_tag=<value>
-      # ---------------------------------------------------------------
       - name: Fetch Latest Tags
         id: fetch
         env:
@@ -41,17 +37,10 @@ jobs:
 
           for var in morphe anddea piko hoo rookie tosox yuzu dropped; do
             eval "tag=\${${var}_tag}"
-            [ -z "$tag" ] && echo "⚠️  Could not fetch tag for: $var" || echo "✅ $var: $tag"
+            [ -z "$tag" ] && echo "WARNING: Could not fetch tag for: $var" || echo "OK: $var: $tag"
             echo "${var}_tag=${tag}" >> $GITHUB_OUTPUT
           done
 
-      # ---------------------------------------------------------------
-      # Compare fetched tags against last-tags.json.
-      # Outputs: <src>_updated=true|false  and  any_updated=true|false
-      # NOTE: ${{ steps.fetch.outputs.X }} are expanded statically by
-      #       Actions before the shell runs, so we pass them as env vars
-      #       and read them inside the shell script instead.
-      # ---------------------------------------------------------------
       - name: Compare with Previous Tags
         id: compare
         env:
@@ -77,14 +66,14 @@ jobs:
 
             if [ -z "$cur" ]; then
               echo "${src}_updated=false" >> $GITHUB_OUTPUT
-              echo "⚠️  $src: fetch failed, skipping"
+              echo "WARNING: $src: fetch failed, skipping"
             elif [ "$cur" != "$prev" ]; then
               any_updated=true
               echo "${src}_updated=true" >> $GITHUB_OUTPUT
-              echo "🆕 $src updated: $prev -> $cur"
+              echo "UPDATED: $src: $prev -> $cur"
             else
               echo "${src}_updated=false" >> $GITHUB_OUTPUT
-              echo "⏸️  $src unchanged: $cur"
+              echo "UNCHANGED: $src: $cur"
             fi
           }
 
@@ -99,98 +88,14 @@ jobs:
 
           echo "any_updated=$any_updated" >> $GITHUB_OUTPUT
 
-      # ---------------------------------------------------------------
-      # Check APK versions for all apps (app version bump = rebuild)
-      # ---------------------------------------------------------------
       - name: Check APK Versions
         id: apkver
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           pip install requests beautifulsoup4 PyGithub --quiet
+          python3 scripts/check_apk_versions.py
 
-          python3 - <<'PYEOF'
-import json, os, sys, logging
-logging.basicConfig(level=logging.WARNING)
-
-# Load last known APK versions
-last = {}
-if os.path.exists("last-tags.json"):
-    with open("last-tags.json") as f:
-        last = json.load(f)
-
-# Load patch config to know which apps exist
-with open("my-patch-config.json") as f:
-    patch_list = json.load(f)["patch_list"]
-
-# Deduplicate app_names
-seen = set()
-apps = []
-for item in patch_list:
-    if item["app_name"] not in seen:
-        seen.add(item["app_name"])
-        apps.append(item["app_name"])
-
-from src import apkmirror, apkpure, uptodown, aptoide, github as github_mod
-
-platform_order = ["github", "apkmirror", "apkpure", "uptodown", "aptoide"]
-
-any_apk_updated = False
-apk_updated_apps = []
-
-github_output = open(os.environ["GITHUB_OUTPUT"], "a")
-
-for app in apps:
-    key = f"apk_{app}"
-    prev = last.get(key, "")
-
-    cur = None
-    for platform in platform_order:
-        import pathlib
-        config_path = pathlib.Path("apps") / platform / f"{app}.json"
-        if not config_path.exists():
-            continue
-        try:
-            with open(config_path) as f:
-                config = json.load(f)
-            mod_map = {
-                "github": github_mod,
-                "apkmirror": apkmirror,
-                "apkpure": apkpure,
-                "uptodown": uptodown,
-                "aptoide": aptoide,
-            }
-            mod = mod_map[platform]
-            ver = mod.get_latest_version(app, config)
-            if ver:
-                cur = str(ver)
-                break
-        except Exception as e:
-            continue
-
-    if cur is None:
-        print(f"⚠️  {app}: could not resolve APK version, skipping")
-        github_output.write(f"apkver_{app}=false\n")
-        continue
-
-    if cur != prev:
-        print(f"🆕 {app} APK updated: {prev!r} -> {cur!r}")
-        any_apk_updated = True
-        apk_updated_apps.append(app)
-        github_output.write(f"apkver_{app}=true\n")
-    else:
-        print(f"⏸️  {app} APK unchanged: {cur}")
-        github_output.write(f"apkver_{app}=false\n")
-
-github_output.write(f"any_apk_updated={str(any_apk_updated).lower()}\n")
-github_output.write(f"apk_updated_apps={json.dumps(apk_updated_apps)}\n")
-github_output.close()
-PYEOF
-
-      # ---------------------------------------------------------------
-      # Build a JSON map of APK asset URLs for sources NOT updated,
-      # so build.yml can reuse previous APKs instead of rebuilding.
-      # ---------------------------------------------------------------
       - name: Collect Reusable APK URLs from Last Release
         id: reuse
         if: steps.compare.outputs.any_updated == 'true' || steps.apkver.outputs.any_apk_updated == 'true'
@@ -224,7 +129,6 @@ PYEOF
             fi
           }
 
-          # 複数ファイルを個別キーで登録する関数（yuucho通帳・認証用）
           maybe_reuse_each() {
             local src="$1" updated="$2" pattern="$3"
             if [ "$updated" = "false" ]; then
@@ -234,33 +138,31 @@ PYEOF
                 key="${src}__${name%.apk}"
                 reuse_map=$(echo "$reuse_map" | jq -c --arg k "$key" --arg v "$url" '.[$k]=$v')
                 echo "  Reuse $key: $url"
-              done < <(echo "$assets_json" | jq -c                 --arg pat "$pattern"                 '.[] | select(.name | test($pat; "i"))' 2>/dev/null)
+              done < <(echo "$assets_json" | jq -c \
+                --arg pat "$pattern" \
+                '.[] | select(.name | test($pat; "i"))' 2>/dev/null)
             fi
           }
 
-          maybe_reuse morphe  "$UPD_MORPHE"   "-morphe-v"
-          maybe_reuse anddea  "$UPD_ANDDEA"   "revanced-anddea"
-          maybe_reuse piko    "$UPD_PIKO"     "-piko"
-          maybe_reuse hoo     "$UPD_HOO"      "-hoo"
-          maybe_reuse rookie  "$UPD_ROOKIE"   "-rookie"
-          maybe_reuse tosox   "$UPD_TOSOX"    "-tosox"
-          maybe_reuse_each yuzu "$UPD_YUZU"   "yuucho"
-          maybe_reuse dropped "$UPD_DROPPED"  "-dropped"
+          maybe_reuse morphe    "$UPD_MORPHE"   "-morphe-v"
+          maybe_reuse anddea    "$UPD_ANDDEA"   "revanced-anddea"
+          maybe_reuse piko      "$UPD_PIKO"     "-piko"
+          maybe_reuse hoo       "$UPD_HOO"      "-hoo"
+          maybe_reuse rookie    "$UPD_ROOKIE"   "-rookie"
+          maybe_reuse tosox     "$UPD_TOSOX"    "-tosox"
+          maybe_reuse_each yuzu "$UPD_YUZU"     "yuucho"
+          maybe_reuse dropped   "$UPD_DROPPED"  "-dropped"
 
           echo "reuse_map=$reuse_map" >> $GITHUB_OUTPUT
 
-      # ---------------------------------------------------------------
-      # Trigger build only when at least one source was updated
-      # ---------------------------------------------------------------
       - name: Trigger Build if Updates Found
         if: steps.compare.outputs.any_updated == 'true' || steps.apkver.outputs.any_apk_updated == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APK_UPDATED_APPS: ${{ steps.apkver.outputs.apk_updated_apps }}
         run: |
-          echo "🚀 Triggering build workflow..."
+          echo "Triggering build workflow..."
 
-          # パッチ更新フラグ（比較結果ベース）
           morphe_upd="${{ steps.compare.outputs.morphe_updated }}"
           anddea_upd="${{ steps.compare.outputs.anddea_updated }}"
           piko_upd="${{ steps.compare.outputs.piko_updated }}"
@@ -270,36 +172,12 @@ PYEOF
           yuzu_upd="${{ steps.compare.outputs.yuzu_updated }}"
           dropped_upd="${{ steps.compare.outputs.dropped_updated }}"
 
-          # APKバージョン更新があったアプリのsourceも updated=true に昇格
-          # (app_name -> source のマッピングをmy-patch-config.jsonから取得)
           if [ -n "$APK_UPDATED_APPS" ] && [ "$APK_UPDATED_APPS" != "[]" ]; then
-            python3 - <<'PYEOF'
-import json, os, sys
+            while IFS= read -r line; do
+              eval "export $line"
+            done < <(python3 scripts/force_sources_from_apps.py)
+          fi
 
-apps = json.loads(os.environ.get("APK_UPDATED_APPS", "[]"))
-with open("my-patch-config.json") as f:
-    patch_list = json.load(f)["patch_list"]
-
-# app_name -> sourceのマッピング
-app_to_sources = {}
-for item in patch_list:
-    app_to_sources.setdefault(item["app_name"], set()).add(item["source"])
-
-sources_to_force = set()
-for app in apps:
-    for src in app_to_sources.get(app, []):
-        sources_to_force.add(src)
-
-for src in sources_to_force:
-    # GitHub Actionsの環境変数として出力
-    varname = src.replace("-", "_").upper()
-    print(f"FORCE_{varname}=true")
-PYEOF
-          fi | while IFS= read -r line; do
-            eval "export $line"
-          done
-
-          # FORCE_* が true なら上書き
           [ "${FORCE_MORPHE:-false}" = "true" ]          && morphe_upd=true
           [ "${FORCE_REVANCED_ANDDEA:-false}" = "true" ] && anddea_upd=true
           [ "${FORCE_PIKO:-false}" = "true" ]            && piko_upd=true
@@ -328,11 +206,8 @@ PYEOF
             -f dropped_updated="$dropped_upd" \
             -f reuse_apks_json="${{ steps.reuse.outputs.reuse_map }}"
 
-          echo "✅ Build workflow triggered"
+          echo "Build workflow triggered"
 
-      # ---------------------------------------------------------------
-      # Persist updated tags to last-tags.json (updated sources only)
-      # ---------------------------------------------------------------
       - name: Update Last Tags File
         if: steps.compare.outputs.any_updated == 'true' || steps.apkver.outputs.any_apk_updated == 'true'
         env:
@@ -353,7 +228,7 @@ PYEOF
           TAG_YUZU:     ${{ steps.fetch.outputs.yuzu_tag }}
           TAG_DROPPED:  ${{ steps.fetch.outputs.dropped_tag }}
         run: |
-          echo "📝 Updating last-tags.json..."
+          echo "Updating last-tags.json..."
           current=$([ -f "last-tags.json" ] && cat last-tags.json || echo "{}")
 
           update_if_changed() {
@@ -372,52 +247,10 @@ PYEOF
           update_if_changed yuzu    "$UPD_YUZU"     "$TAG_YUZU"
           update_if_changed dropped "$UPD_DROPPED"  "$TAG_DROPPED"
 
-          # APKバージョンが更新されたアプリも last-tags.json に記録
+          echo "$current" > last-tags.json
+
           pip install requests beautifulsoup4 PyGithub --quiet 2>/dev/null
-
-          python3 - <<'PYEOF'
-import json, os, sys, logging, pathlib
-logging.basicConfig(level=logging.WARNING)
-
-with open("last-tags.json") as f:
-    current = json.load(f)
-
-with open("my-patch-config.json") as f:
-    patch_list = json.load(f)["patch_list"]
-
-seen = set()
-apps = []
-for item in patch_list:
-    if item["app_name"] not in seen:
-        seen.add(item["app_name"])
-        apps.append(item["app_name"])
-
-from src import apkmirror, apkpure, uptodown, aptoide, github as github_mod
-
-platform_order = ["github", "apkmirror", "apkpure", "uptodown", "aptoide"]
-mod_map = {"github": github_mod, "apkmirror": apkmirror, "apkpure": apkpure,
-           "uptodown": uptodown, "aptoide": aptoide}
-
-for app in apps:
-    key = f"apk_{app}"
-    for platform in platform_order:
-        config_path = pathlib.Path("apps") / platform / f"{app}.json"
-        if not config_path.exists():
-            continue
-        try:
-            with open(config_path) as f:
-                config = json.load(f)
-            ver = mod_map[platform].get_latest_version(app, config)
-            if ver:
-                current[key] = str(ver)
-                break
-        except Exception:
-            continue
-
-with open("last-tags.json", "w") as f:
-    json.dump(current, f, indent=2)
-print("APK versions saved to last-tags.json")
-PYEOF
+          python3 scripts/save_apk_versions.py
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -425,10 +258,10 @@ PYEOF
           git commit -m "chore: update last-tags [skip ci]"
           git push
 
-          echo "✅ last-tags.json updated and pushed"
+          echo "last-tags.json updated and pushed"
 
-      - name: Log – No Updates Found
+      - name: Log - No Updates Found
         if: steps.compare.outputs.any_updated == 'false' && steps.apkver.outputs.any_apk_updated == 'false'
         run: |
-          echo "📭 No updates found across all sources. Skipping build."
+          echo "No updates found across all sources. Skipping build."
           cat last-tags.json 2>/dev/null || echo "(last-tags.json not yet created)"

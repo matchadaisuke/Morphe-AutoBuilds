@@ -1,0 +1,71 @@
+import json, os, sys, logging, pathlib
+logging.basicConfig(level=logging.WARNING)
+
+last = {}
+if os.path.exists("last-tags.json"):
+    with open("last-tags.json") as f:
+        last = json.load(f)
+
+with open("my-patch-config.json") as f:
+    patch_list = json.load(f)["patch_list"]
+
+seen = set()
+apps = []
+for item in patch_list:
+    if item["app_name"] not in seen:
+        seen.add(item["app_name"])
+        apps.append(item["app_name"])
+
+from src import apkmirror, apkpure, uptodown, aptoide, github as github_mod
+
+platform_order = ["github", "apkmirror", "apkpure", "uptodown", "aptoide"]
+
+any_apk_updated = False
+apk_updated_apps = []
+
+github_output = open(os.environ["GITHUB_OUTPUT"], "a")
+
+for app in apps:
+    key = f"apk_{app}"
+    prev = last.get(key, "")
+
+    cur = None
+    for platform in platform_order:
+        config_path = pathlib.Path("apps") / platform / f"{app}.json"
+        if not config_path.exists():
+            continue
+        try:
+            with open(config_path) as f:
+                config = json.load(f)
+            mod_map = {
+                "github": github_mod,
+                "apkmirror": apkmirror,
+                "apkpure": apkpure,
+                "uptodown": uptodown,
+                "aptoide": aptoide,
+            }
+            mod = mod_map[platform]
+            ver = mod.get_latest_version(app, config)
+            if ver:
+                cur = str(ver)
+                break
+        except Exception:
+            continue
+
+    if cur is None:
+        print(f"WARNING: {app}: could not resolve APK version, skipping")
+        github_output.write(f"apkver_{app}=false\n")
+        continue
+
+    if cur != prev:
+        print(f"UPDATED: {app} APK updated: {prev!r} -> {cur!r}")
+        any_apk_updated = True
+        apk_updated_apps.append(app)
+        github_output.write(f"apkver_{app}=true\n")
+    else:
+        print(f"UNCHANGED: {app} APK unchanged: {cur}")
+        github_output.write(f"apkver_{app}=false\n")
+
+github_output.write(f"any_apk_updated={str(any_apk_updated).lower()}\n")
+github_output.write(f"apk_updated_apps={json.dumps(apk_updated_apps)}\n")
+github_output.close()
