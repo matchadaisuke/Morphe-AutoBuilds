@@ -214,7 +214,7 @@ jobs:
         with:
           name: apk-${{ matrix.app_name }}-${{ matrix.source }}
           path: "*.apk"
-          if-no-files-found: warn
+          if-no-files-found: error
 
   create-release:
     name: Create Integrated Release
@@ -237,7 +237,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ./all-apks
-          if-no-files-found: warn
+          if-no-files-found: error
       
       - name: Check if Any APKs Were Built
         id: check-apks
