@@ -182,8 +182,8 @@ def get_supported_version(package_name: str, cli: str, patches: str) -> Optional
         cmd = [
             'java', '-jar', cli,
             'list-versions',
+            '--patches', patches,
             '-f', package_name,
-            patches
         ]
     elif is_revanced_v6_or_newer:
         cmd = [
@@ -211,8 +211,13 @@ def get_supported_version(package_name: str, cli: str, patches: str) -> Optional
     logging.info(f"CLI raw output lines: {lines}")
 
     # Detect CLI error/usage output (wrong syntax, unrecognized args, etc.)
+    # Check all lines because Morphe CLI prefixes output with "INFO: Running in Headless environment..."
+    all_output_lower = output.lower()
+    if 'missing required option' in all_output_lower or 'unmatched argument' in all_output_lower:
+        logging.warning(f"CLI returned error/usage output (missing option or unmatched arg), cannot determine version")
+        return None
     first_line = lines[0].strip().lower()
-    if 'usage:' in first_line or 'unmatched argument' in first_line or 'error' in first_line:
+    if 'usage:' in first_line or 'error' in first_line:
         logging.warning(f"CLI returned error/usage output, cannot determine version")
         return None
 
@@ -221,8 +226,11 @@ def get_supported_version(package_name: str, cli: str, patches: str) -> Optional
         return None
 
     versions = []
-    for line in lines[2:]:
+    for line in lines:
         line = line.strip()
+        # Strip Morphe CLI INFO: prefix if present
+        if line.lower().startswith('info:') or line.lower().startswith('warning:'):
+            continue
         if line and 'Any' not in line:
             # Parse version - may include "build XXX" suffix
             # Format: "6.6 build 002" or "32.30.0(1575420)" or just "6.6"

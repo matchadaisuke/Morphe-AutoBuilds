@@ -51,15 +51,17 @@ jobs:
       
       - name: Compare with Previous Tags
         id: compare
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           morphe_tag="${{ steps.morphe.outputs.morphe_tag }}"
           anddea_tag="${{ steps.anddea.outputs.anddea_tag }}"
           
-          # Get previous tags from repository variables
-          last_morphe_tag=$(gh variable get LAST_MORPHE_TAG 2>/dev/null || echo "")
-          last_anddea_tag=$(gh variable get LAST_ANDDEA_TAG 2>/dev/null || echo "")
+          # Read previous tags from committed file
+          last_morphe_tag=""
+          last_anddea_tag=""
+          if [ -f "last-tags.json" ]; then
+            last_morphe_tag=$(jq -r '.morphe // ""' last-tags.json)
+            last_anddea_tag=$(jq -r '.anddea // ""' last-tags.json)
+          fi
           
           echo "Current Morphe: $morphe_tag (Previous: $last_morphe_tag)"
           echo "Current Anddea: $anddea_tag (Previous: $last_anddea_tag)"
@@ -98,7 +100,6 @@ jobs:
           
           echo "🚀 Triggering build workflow..."
           
-          # Dispatch build workflow with payload
           gh workflow run build.yml \
             -f morphe_tag="$morphe_tag" \
             -f anddea_tag="$anddea_tag" \
@@ -107,26 +108,22 @@ jobs:
           
           echo "✅ Build workflow triggered"
       
-      - name: Update Repository Variables
+      - name: Update Last Tags File
         if: steps.compare.outputs.morphe_updated == 'true' || steps.compare.outputs.anddea_updated == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           morphe_tag="${{ steps.compare.outputs.morphe_tag }}"
           anddea_tag="${{ steps.compare.outputs.anddea_tag }}"
           
-          echo "📝 Updating repository variables..."
+          echo "📝 Updating last-tags.json..."
+          echo "{\"morphe\": \"$morphe_tag\", \"anddea\": \"$anddea_tag\"}" > last-tags.json
           
-          # Update variables using gh
-          if [ "${{ steps.compare.outputs.morphe_updated }}" = "true" ]; then
-            gh variable set LAST_MORPHE_TAG --body "$morphe_tag"
-            echo "✅ Updated LAST_MORPHE_TAG to $morphe_tag"
-          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add last-tags.json
+          git commit -m "chore: update last-tags to morphe=$morphe_tag anddea=$anddea_tag [skip ci]"
+          git push
           
-          if [ "${{ steps.compare.outputs.anddea_updated }}" = "true" ]; then
-            gh variable set LAST_ANDDEA_TAG --body "$anddea_tag"
-            echo "✅ Updated LAST_ANDDEA_TAG to $anddea_tag"
-          fi
+          echo "✅ last-tags.json updated and pushed"
       
       - name: Log Check Result
         if: steps.compare.outputs.morphe_updated == 'false' && steps.compare.outputs.anddea_updated == 'false'

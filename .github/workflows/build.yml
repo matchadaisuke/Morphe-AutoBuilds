@@ -291,6 +291,7 @@ jobs:
           gh release create "$release_tag" \
             --title "Morphe AutoBuilds $release_tag" \
             --notes-file release_notes.md \
+            --clobber \
             ./release-apks/*.apk
           
           echo "Release created successfully!"

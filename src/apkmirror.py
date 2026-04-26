@@ -249,7 +249,29 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
         logging.debug(f"Found {len(rows)} rows total")
         for idx, row in enumerate(rows[:5]):  # First 5 rows
             logging.debug(f"Row {idx}: {row.get_text()[:100]}...")
-        return None
+        
+        # Fallback: try relaxed criteria (drop arch requirement, accept APKM/bundle types)
+        fallback_criteria_sets = [
+            [config['type'], 'universal', config['dpi']],  # try universal arch
+            [config['type'], config['dpi']],               # drop arch entirely
+            ['BUNDLE', config['dpi']],                     # try bundle type
+            [config['dpi']],                               # only dpi requirement
+        ]
+        for fallback_criteria in fallback_criteria_sets:
+            for row in rows:
+                row_text = row.get_text()
+                if all(criterion in row_text for criterion in fallback_criteria):
+                    if re.search(r'\d+(\.\d+)+', row_text):
+                        sub_url = row.find('a', class_='accent_color')
+                        if sub_url:
+                            download_page_url = base_url + sub_url['href']
+                            logging.warning(f"Using fallback variant with relaxed criteria {fallback_criteria}")
+                            break
+            if download_page_url:
+                break
+        
+        if not download_page_url:
+            return None
     
     # --- STANDARD DOWNLOAD FLOW ---
     try:
@@ -274,28 +296,6 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
     except Exception as e:
         logging.error(f"Error in download flow: {e}")
     
-    return None
-
-    # --- STANDARD DOWNLOAD FLOW (Page 2 -> Page 3 -> Link) ---
-    response = session.get(download_page_url)
-    response.raise_for_status()
-    content_size = len(response.content)
-    logging.info(f"URL:{response.url} [{content_size}/{content_size}] -> Variant Page")
-    soup = BeautifulSoup(response.content, "html.parser")
-
-    sub_url = soup.find('a', class_='downloadButton')
-    if sub_url:
-        final_download_page_url = base_url + sub_url['href']
-        response = session.get(final_download_page_url)
-        response.raise_for_status()
-        content_size = len(response.content)
-        logging.info(f"URL:{response.url} [{content_size}/{content_size}] -> Download Page")
-        soup = BeautifulSoup(response.content, "html.parser")
-
-        button = soup.find('a', id='download-link')
-        if button:
-            return base_url + button['href']
-
     return None
 
 def get_architecture_criteria(arch: str) -> dict:

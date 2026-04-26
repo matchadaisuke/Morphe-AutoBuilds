@@ -141,6 +141,9 @@ def download_platform(app_name: str, platform: str, cli: str, patches: str, arch
         version = version or platform_module.get_latest_version(app_name, config)
         
         download_link = platform_module.get_download_link(version, app_name, config)
+        if not download_link:
+            logging.error(f"No download link found for {app_name} {version} on {platform}")
+            return None, None
         filepath = download_resource(download_link)
         return filepath, version 
 
