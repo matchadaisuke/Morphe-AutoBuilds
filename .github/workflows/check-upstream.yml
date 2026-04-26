@@ -256,7 +256,6 @@ PYEOF
         if: steps.compare.outputs.any_updated == 'true' || steps.apkver.outputs.any_apk_updated == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        env:
           APK_UPDATED_APPS: ${{ steps.apkver.outputs.apk_updated_apps }}
         run: |
           echo "🚀 Triggering build workflow..."
