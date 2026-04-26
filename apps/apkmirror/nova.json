@@ -1,0 +1,9 @@
+{
+    "org": "teslacoil-software",
+    "name": "nova-launcher",
+    "type": "APK",
+    "arch": "universal",
+    "dpi": "nodpi",
+    "package": "com.teslacoilsw.launcher",
+    "version": ""
+}

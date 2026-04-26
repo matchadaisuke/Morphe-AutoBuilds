@@ -232,16 +232,29 @@ def get_supported_version(package_name: str, cli: str, patches: str) -> Optional
         if line.lower().startswith('info:') or line.lower().startswith('warning:'):
             continue
         if line and 'Any' not in line:
-            # Parse version - may include "build XXX" suffix
-            # Format: "6.6 build 002" or "32.30.0(1575420)" or just "6.6"
+            # Parse version - CLIの出力形式は複数パターンある:
+            #   "6.6 build 002"           -> バージョン名
+            #   "32.30.0(1575420)"        -> バージョン名
+            #   "81042 (8.5.1) (1 patch)" -> vercode (vername) ... Morphe形式
+            #   "4.12.81 (1 patch)"       -> バージョン名 (パッチ数)
             parts = line.split()
             if parts:
-                version = parts[0]
+                first = parts[0]
                 # Validate it looks like a version (starts with a digit)
-                if not version[0].isdigit():
+                if not first[0].isdigit():
                     continue
+
+                # Morphe形式: "vercode (vername) ..." -> vername を優先
+                # parts[1] が "(x.y.z)" の括弧付きバージョン名かチェック
+                if len(parts) >= 2 and parts[1].startswith("(") and parts[1].endswith(")"):
+                    inner = parts[1][1:-1]  # 括弧を除去
+                    if re.match(r"^\d[\d.]+$", inner):
+                        versions.append(inner)
+                        continue
+
+                version = first
                 # Check if next parts are "build XXX"
-                if len(parts) >= 3 and parts[1].lower() == 'build':
+                if len(parts) >= 3 and parts[1].lower() == "build":
                     version = f"{parts[0]} build {parts[2]}"
                 versions.append(version)
 

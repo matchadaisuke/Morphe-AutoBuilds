@@ -1,5 +1,6 @@
 {
-    "name": "yuucho-tsucho-app",
+    "store_name": "japanpost-jp-bank-bankbookapp",
+    "name": "japanpost-jp-bank-bankbookapp",
     "package": "jp.japanpost.jp_bank.bankbookapp",
     "version": ""
 }

@@ -1,5 +1,6 @@
 {
-    "name": "yuucho-ninsho-app",
+    "store_name": "japanpost-jp-bank-fidoapp",
+    "name": "japanpost-jp-bank-fidoapp",
     "package": "jp.japanpost.jp_bank.FIDOapp",
     "version": ""
 }

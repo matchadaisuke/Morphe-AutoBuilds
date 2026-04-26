@@ -9,6 +9,21 @@ def get_latest_version(app_name: str, config: Dict) -> str:
     package = config['package']
     arch = config.get('arch', 'universal')
     q = _get_q_param(arch)
+
+    # If a specific store_name is configured, use getApp endpoint directly
+    store_name = config.get('store_name')
+    if store_name:
+        url = f"{BASE_URL}getApp?package_name={package}&store_name={store_name}{q}"
+        res = session.get(url)
+        res.raise_for_status()
+        data = res.json()
+        app_data = data.get('data', {})
+        version = app_data.get('file', {}).get('vername')
+        if version:
+            logging.info(f"aptoide: found version {version} for {package} (store: {store_name})")
+            return version
+        raise ValueError(f"aptoide: could not get version for '{package}' from store '{store_name}'")
+
     url = f"{BASE_URL}apps/search?query={package}&limit=1&trusted=true{q}"
     res = session.get(url)
     res.raise_for_status()
@@ -24,6 +39,18 @@ def get_download_link(version: str, app_name: str, config: Dict) -> str:
     package = config['package']
     arch = config.get('arch', 'universal')
     q = _get_q_param(arch)
+    store_name = config.get('store_name')
+
+    # If a specific store_name is configured, use getApp endpoint directly
+    if store_name:
+        url = f"{BASE_URL}getApp?package_name={package}&store_name={store_name}{q}"
+        res = session.get(url)
+        res.raise_for_status()
+        data = res.json()
+        path = data.get('data', {}).get('file', {}).get('path')
+        if path:
+            return path
+        raise ValueError(f"aptoide: no download path for '{package}' in store '{store_name}'")
 
     if version.lower() == "latest":
         url = f"{BASE_URL}apps/search?query={package}&limit=1&trusted=true{q}"
@@ -46,7 +73,23 @@ def get_download_link(version: str, app_name: str, config: Dict) -> str:
             vercode = app['file']['vercode']
             break
     if not vercode:
-        raise ValueError(f"aptoide: version '{version}' not found for package '{package}'")
+        # Version not found in listAppVersions — fall back to search API
+        # (some apps report a version in search results but don't expose it
+        # in the versions list; in that case grab the download path directly)
+        logging.warning(
+            f"aptoide: version '{version}' not in listAppVersions for '{package}', "
+            f"falling back to search API"
+        )
+        url_search = f"{BASE_URL}apps/search?query={package}&limit=1&trusted=true{q}"
+        res_s = session.get(url_search)
+        res_s.raise_for_status()
+        items = res_s.json().get('datalist', {}).get('list', [])
+        if not items:
+            raise ValueError(f"aptoide: version '{version}' not found for package '{package}'")
+        path = items[0]['file'].get('path')
+        if not path:
+            raise ValueError(f"aptoide: no download path for package '{package}'")
+        return path
 
     url_meta = f"{BASE_URL}getAppMeta?package_name={package}&vercode={vercode}{q}"
     res_meta = session.get(url_meta)

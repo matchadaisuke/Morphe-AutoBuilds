@@ -1,9 +1,5 @@
 {
-    "org": "adguard-software-ltd",
     "name": "adguard-adblock-privacy",
-    "type": "APK",
-    "arch": "universal",
-    "dpi": "nodpi",
     "package": "com.adguard.android",
     "version": ""
 }

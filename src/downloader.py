@@ -116,6 +116,19 @@ def download_platform(app_name: str, platform: str, cli: str, patches: str, arch
         if arch:
             config['arch'] = arch
 
+        # Support direct_url: skip version resolution and download directly
+        direct_url = config.get("direct_url")
+        if direct_url:
+            logging.info(f"🔗 {platform}: using direct_url for {app_name}")
+            try:
+                filepath = download_resource(direct_url)
+                version = config.get("version") or "direct"
+                logging.info(f"✅ {platform}: downloaded {app_name} via direct_url -> {filepath.name}")
+                return filepath, version
+            except Exception as e:
+                logging.error(f"❌ {platform}: direct_url download failed for {app_name}: {type(e).__name__}: {e}")
+                return None, None
+
         version = config.get("version") or utils.get_supported_version(config['package'], cli, patches)
         platform_module = globals()[platform]
 
