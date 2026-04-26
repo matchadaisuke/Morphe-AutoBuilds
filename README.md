@@ -2,9 +2,9 @@
 
 # 🚀 Morphe AutoBuilds
 
-[![Upstream Check](https://img.shields.io/github/actions/workflow/status/YOUR_USERNAME/morphe-autobuilds/check-upstream.yml?label=Upstream%20Check&style=for-the-badge&color=2ea44f)](https://github.com/YOUR_USERNAME/morphe-autobuilds/actions/workflows/check-upstream.yml)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/YOUR_USERNAME/morphe-autobuilds/build.yml?label=Build%20Status&style=for-the-badge&color=0366d6)](https://github.com/YOUR_USERNAME/morphe-autobuilds/actions/workflows/build.yml)
-[![Latest Release](https://img.shields.io/github/v/release/YOUR_USERNAME/morphe-autobuilds?style=for-the-badge&label=Latest%20Release&color=orange)](https://github.com/YOUR_USERNAME/morphe-autobuilds/releases/latest)
+[![Upstream Check](https://img.shields.io/github/actions/workflow/status/matchadaisuke/Morphe-AutoBuilds/check-upstream.yml?label=Upstream%20Check&style=for-the-badge&color=2ea44f)](https://github.com/matchadaisuke/Morphe-AutoBuilds/actions/workflows/check-upstream.yml)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/matchadaisuke/Morphe-AutoBuilds/build.yml?label=Build%20Status&style=for-the-badge&color=0366d6)](https://github.com/matchadaisuke/Morphe-AutoBuilds/actions/workflows/build.yml)
+[![Latest Release](https://img.shields.io/github/v/release/matchadaisuke/Morphe-AutoBuilds?style=for-the-badge&label=Latest%20Release&color=orange)](https://github.com/matchadaisuke/Morphe-AutoBuilds/releases/latest)
 [![Python Version](https://img.shields.io/badge/Python-3.11%2B-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 
 <p align="center">
@@ -16,8 +16,8 @@
   A sophisticated, automated pipeline that builds ready-to-install YouTube and YouTube Music APKs with Official Morphe and Anddea patches. This system automatically monitors upstream releases, downloads base APKs, applies patches, and publishes optimized arm64-v8a builds with integrated release notes.
 </p>
 
-[![View Latest Release](https://img.shields.io/badge/View%20Latest%20Release-0A0A0A?style=flat&logo=github&logoColor=white)](https://github.com/YOUR_USERNAME/morphe-autobuilds/releases/latest)
-[![Report Bug](https://img.shields.io/badge/Report%20Bug-0A0A0A?style=flat&logo=github&logoColor=white)](https://github.com/YOUR_USERNAME/morphe-autobuilds/issues)
+[![View Latest Release](https://img.shields.io/badge/View%20Latest%20Release-0A0A0A?style=flat&logo=github&logoColor=white)](https://github.com/matchadaisuke/Morphe-AutoBuilds/releases/latest)
+[![Report Bug](https://img.shields.io/badge/Report%20Bug-0A0A0A?style=flat&logo=github&logoColor=white)](https://github.com/matchadaisuke/Morphe-AutoBuilds/issues)
 [![View Docs](https://img.shields.io/badge/View%20Docs-0A0A0A?style=flat&logo=github&logoColor=white)](./IMPLEMENTATION.md)
 
 </div>
@@ -32,8 +32,8 @@
 
 | App | Morphe | Anddea |
 | :--- | :--- | :--- |
-| **YouTube** | [Download](https://github.com/YOUR_USERNAME/morphe-autobuilds/releases/latest) | [Download](https://github.com/YOUR_USERNAME/morphe-autobuilds/releases/latest) |
-| **YouTube Music** | [Download](https://github.com/YOUR_USERNAME/morphe-autobuilds/releases/latest) | [Download](https://github.com/YOUR_USERNAME/morphe-autobuilds/releases/latest) |
+| **YouTube** | [Download](https://github.com/matchadaisuke/Morphe-AutoBuilds/releases/latest) | [Download](https://github.com/matchadaisuke/Morphe-AutoBuilds/releases/latest) |
+| **YouTube Music** | [Download](https://github.com/matchadaisuke/Morphe-AutoBuilds/releases/latest) | [Download](https://github.com/matchadaisuke/Morphe-AutoBuilds/releases/latest) |
 
 ### 📱 Supported Configuration
 

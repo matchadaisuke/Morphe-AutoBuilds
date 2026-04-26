@@ -7,128 +7,205 @@ on:
 
 jobs:
   check-upstream:
-    name: Check Morphe and Anddea Upstream
+    name: Check All Upstream Patch Sources
     runs-on: ubuntu-latest
     permissions:
       contents: write
       actions: write
-    
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-      
-      - name: Get Latest Morphe Tag
-        id: morphe
+
+      # ---------------------------------------------------------------
+      # Fetch latest tags for every patch source
+      # ---------------------------------------------------------------
+      - name: Fetch Latest Tags
+        id: fetch
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # /releases/latest excludes pre-releases; use /releases?per_page=1 instead
-          morphe_tag=$(gh api "repos/MorpheApp/morphe-patches/releases?per_page=1" --jq '.[0].tag_name' 2>/dev/null || echo "")
-          
-          if [ -z "$morphe_tag" ]; then
-            echo "❌ Failed to fetch Morphe tag"
-            exit 1
-          fi
-          
-          echo "morphe_tag=$morphe_tag" >> $GITHUB_OUTPUT
-          echo "✅ Morphe latest tag: $morphe_tag"
-      
-      - name: Get Latest Anddea Tag
-        id: anddea
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # /releases/latest excludes pre-releases; use /releases?per_page=1 instead
-          anddea_tag=$(gh api "repos/anddea/revanced-patches/releases?per_page=1" --jq '.[0].tag_name' 2>/dev/null || echo "")
-          
-          if [ -z "$anddea_tag" ]; then
-            echo "❌ Failed to fetch Anddea tag"
-            exit 1
-          fi
-          
-          echo "anddea_tag=$anddea_tag" >> $GITHUB_OUTPUT
-          echo "✅ Anddea latest tag: $anddea_tag"
-      
+          fetch_tag() {
+            local repo="$1"
+            gh api "repos/${repo}/releases?per_page=1" --jq '.[0].tag_name' 2>/dev/null || echo ""
+          }
+
+          morphe_tag=$(fetch_tag  "MorpheApp/morphe-patches")
+          anddea_tag=$(fetch_tag  "anddea/revanced-patches")
+          piko_tag=$(fetch_tag    "crimera/piko")
+          hoo_tag=$(fetch_tag     "hoo-dles/morphe-patches")
+          rookie_tag=$(fetch_tag  "RookieEnough/De-ReVanced")
+          tosox_tag=$(fetch_tag   "Tosox/revanced-patches")
+          yuzu_tag=$(fetch_tag    "YuzuMikan404/linegms-fork-second-")
+          dropped_tag=$(fetch_tag "indrastorms/Dropped-Patches")
+
+          for var in morphe anddea piko hoo rookie tosox yuzu dropped; do
+            eval "tag=\${${var}_tag}"
+            if [ -z "$tag" ]; then
+              echo "⚠️  Could not fetch tag for source: $var (will skip update check for it)"
+            else
+              echo "✅ $var: $tag"
+            fi
+            echo "${var}_tag=$tag" >> $GITHUB_OUTPUT
+          done
+
+      # ---------------------------------------------------------------
+      # Compare with previously stored tags in last-tags.json
+      # ---------------------------------------------------------------
       - name: Compare with Previous Tags
         id: compare
         run: |
-          morphe_tag="${{ steps.morphe.outputs.morphe_tag }}"
-          anddea_tag="${{ steps.anddea.outputs.anddea_tag }}"
-          
-          # Read previous tags from committed file
-          last_morphe_tag=""
-          last_anddea_tag=""
-          if [ -f "last-tags.json" ]; then
-            last_morphe_tag=$(jq -r '.morphe // ""' last-tags.json)
-            last_anddea_tag=$(jq -r '.anddea // ""' last-tags.json)
-          fi
-          
-          echo "Current Morphe: $morphe_tag (Previous: $last_morphe_tag)"
-          echo "Current Anddea: $anddea_tag (Previous: $last_anddea_tag)"
-          
-          morphe_updated=false
-          anddea_updated=false
-          
-          if [ "$morphe_tag" != "$last_morphe_tag" ]; then
-            morphe_updated=true
-            echo "✅ Morphe has been updated"
-          else
-            echo "⏸️ Morphe has not changed"
-          fi
-          
-          if [ "$anddea_tag" != "$last_anddea_tag" ]; then
-            anddea_updated=true
-            echo "✅ Anddea has been updated"
-          else
-            echo "⏸️ Anddea has not changed"
-          fi
-          
-          echo "morphe_updated=$morphe_updated" >> $GITHUB_OUTPUT
-          echo "anddea_updated=$anddea_updated" >> $GITHUB_OUTPUT
-          echo "morphe_tag=$morphe_tag" >> $GITHUB_OUTPUT
-          echo "anddea_tag=$anddea_tag" >> $GITHUB_OUTPUT
-      
-      - name: Trigger Build if Updates Found
-        if: steps.compare.outputs.morphe_updated == 'true' || steps.compare.outputs.anddea_updated == 'true'
+          load_last() {
+            local key="$1"
+            if [ -f "last-tags.json" ]; then
+              jq -r ".${key} // \"\"" last-tags.json
+            else
+              echo ""
+            fi
+          }
+
+          any_updated=false
+          updated_sources=()
+          not_updated_sources=()
+
+          for src in morphe anddea piko hoo rookie tosox yuzu dropped; do
+            eval "cur=\${{ steps.fetch.outputs.${src}_tag }}"
+            prev=$(load_last "$src")
+
+            if [ -z "$cur" ]; then
+              # Could not fetch – treat as not updated to avoid false triggers
+              not_updated_sources+=("$src")
+              echo "${src}_updated=false" >> $GITHUB_OUTPUT
+            elif [ "$cur" != "$prev" ]; then
+              any_updated=true
+              updated_sources+=("$src")
+              echo "${src}_updated=true" >> $GITHUB_OUTPUT
+              echo "🆕 $src updated: $prev -> $cur"
+            else
+              not_updated_sources+=("$src")
+              echo "${src}_updated=false" >> $GITHUB_OUTPUT
+              echo "⏸️  $src unchanged: $cur"
+            fi
+          done
+
+          echo "any_updated=$any_updated" >> $GITHUB_OUTPUT
+          echo "Updated: ${updated_sources[*]:-none}"
+          echo "Unchanged: ${not_updated_sources[*]:-none}"
+
+      # ---------------------------------------------------------------
+      # Collect latest-release APK asset URLs for unchanged sources
+      # so build.yml can reuse them without rebuilding.
+      # ---------------------------------------------------------------
+      - name: Collect Reusable APK URLs from Last Release
+        id: reuse
+        if: steps.compare.outputs.any_updated == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          morphe_tag="${{ steps.compare.outputs.morphe_tag }}"
-          anddea_tag="${{ steps.compare.outputs.anddea_tag }}"
-          morphe_updated="${{ steps.compare.outputs.morphe_updated }}"
-          anddea_updated="${{ steps.compare.outputs.anddea_updated }}"
-          
-          echo "🚀 Triggering build workflow..."
-          
-          gh workflow run build.yml \
-            -f morphe_tag="$morphe_tag" \
-            -f anddea_tag="$anddea_tag" \
-            -f morphe_updated="$morphe_updated" \
-            -f anddea_updated="$anddea_updated"
-          
-          echo "✅ Build workflow triggered"
-      
-      - name: Update Last Tags File
-        if: steps.compare.outputs.morphe_updated == 'true' || steps.compare.outputs.anddea_updated == 'true'
+          # Build a JSON map: { "source_name": "asset_download_url", ... }
+          # for every source that was NOT updated this cycle.
+
+          # Map source name -> pattern we look for in APK filename
+          declare -A src_pattern
+          src_pattern[morphe]="morphe-v"
+          src_pattern[anddea]="revanced-anddea"
+          src_pattern[piko]="piko"
+          src_pattern[hoo]="hoo"
+          src_pattern[rookie]="rookie"
+          src_pattern[tosox]="tosox"
+          src_pattern[yuzu]="yuzu"
+          src_pattern[dropped]="dropped"
+
+          # Get all asset URLs from the most recent release
+          assets_json=$(gh api "repos/${{ github.repository }}/releases?per_page=1" \
+            --jq '.[0].assets // []' 2>/dev/null || echo "[]")
+
+          reuse_map="{}"
+          for src in morphe anddea piko hoo rookie tosox yuzu dropped; do
+            eval "updated=\${{ steps.compare.outputs.${src}_updated }}"
+            if [ "$updated" = "false" ]; then
+              pattern="${src_pattern[$src]}"
+              # Find matching asset URL
+              url=$(echo "$assets_json" | jq -r \
+                --arg pat "$pattern" \
+                '.[] | select(.name | test($pat; "i")) | .browser_download_url' \
+                2>/dev/null | head -1)
+              if [ -n "$url" ]; then
+                reuse_map=$(echo "$reuse_map" | jq --arg k "$src" --arg v "$url" '.[$k]=$v')
+                echo "  Reuse $src: $url"
+              fi
+            fi
+          done
+
+          echo "reuse_map=$reuse_map" >> $GITHUB_OUTPUT
+
+      # ---------------------------------------------------------------
+      # Trigger build only when something changed
+      # ---------------------------------------------------------------
+      - name: Trigger Build if Updates Found
+        if: steps.compare.outputs.any_updated == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          morphe_tag="${{ steps.compare.outputs.morphe_tag }}"
-          anddea_tag="${{ steps.compare.outputs.anddea_tag }}"
-          
+          echo "🚀 Triggering build workflow with updated sources only..."
+
+          gh workflow run build.yml \
+            -f morphe_tag="${{ steps.fetch.outputs.morphe_tag }}" \
+            -f anddea_tag="${{ steps.fetch.outputs.anddea_tag }}" \
+            -f piko_tag="${{ steps.fetch.outputs.piko_tag }}" \
+            -f hoo_tag="${{ steps.fetch.outputs.hoo_tag }}" \
+            -f rookie_tag="${{ steps.fetch.outputs.rookie_tag }}" \
+            -f tosox_tag="${{ steps.fetch.outputs.tosox_tag }}" \
+            -f yuzu_tag="${{ steps.fetch.outputs.yuzu_tag }}" \
+            -f dropped_tag="${{ steps.fetch.outputs.dropped_tag }}" \
+            -f morphe_updated="${{ steps.compare.outputs.morphe_updated }}" \
+            -f anddea_updated="${{ steps.compare.outputs.anddea_updated }}" \
+            -f piko_updated="${{ steps.compare.outputs.piko_updated }}" \
+            -f hoo_updated="${{ steps.compare.outputs.hoo_updated }}" \
+            -f rookie_updated="${{ steps.compare.outputs.rookie_updated }}" \
+            -f tosox_updated="${{ steps.compare.outputs.tosox_updated }}" \
+            -f yuzu_updated="${{ steps.compare.outputs.yuzu_updated }}" \
+            -f dropped_updated="${{ steps.compare.outputs.dropped_updated }}" \
+            -f reuse_apks_json="${{ steps.reuse.outputs.reuse_map }}"
+
+          echo "✅ Build workflow triggered"
+
+      # ---------------------------------------------------------------
+      # Persist new tags only for sources that were actually updated
+      # ---------------------------------------------------------------
+      - name: Update Last Tags File
+        if: steps.compare.outputs.any_updated == 'true'
+        run: |
           echo "📝 Updating last-tags.json..."
-          echo "{\"morphe\": \"$morphe_tag\", \"anddea\": \"$anddea_tag\"}" > last-tags.json
-          
+
+          # Start from existing file (or empty object)
+          if [ -f "last-tags.json" ]; then
+            current=$(cat last-tags.json)
+          else
+            current="{}"
+          fi
+
+          # Only overwrite keys for sources that changed
+          for src in morphe anddea piko hoo rookie tosox yuzu dropped; do
+            eval "updated=\${{ steps.compare.outputs.${src}_updated }}"
+            eval "tag=\${{ steps.fetch.outputs.${src}_tag }}"
+            if [ "$updated" = "true" ] && [ -n "$tag" ]; then
+              current=$(echo "$current" | jq --arg k "$src" --arg v "$tag" '.[$k]=$v')
+            fi
+          done
+
+          echo "$current" | jq '.' > last-tags.json
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add last-tags.json
-          git commit -m "chore: update last-tags to morphe=$morphe_tag anddea=$anddea_tag [skip ci]"
+          git commit -m "chore: update last-tags [skip ci]"
           git push
-          
+
           echo "✅ last-tags.json updated and pushed"
-      
-      - name: Log Check Result
-        if: steps.compare.outputs.morphe_updated == 'false' && steps.compare.outputs.anddea_updated == 'false'
+
+      - name: Log – No Updates Found
+        if: steps.compare.outputs.any_updated == 'false'
         run: |
-          echo "📭 No updates found. Skipping build."
-          echo "Current tags:"
-          echo "  - Morphe: ${{ steps.compare.outputs.morphe_tag }}"
-          echo "  - Anddea: ${{ steps.compare.outputs.anddea_tag }}"
+          echo "📭 No updates found across all sources. Skipping build."
+          cat last-tags.json 2>/dev/null || echo "(last-tags.json not yet created)"

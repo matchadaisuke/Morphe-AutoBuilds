@@ -7,21 +7,73 @@ on:
   workflow_dispatch:
     inputs:
       morphe_tag:
-        description: 'Morphe tag to build'
+        description: 'Morphe (Official) tag'
         required: false
         default: 'latest'
       anddea_tag:
-        description: 'Anddea tag to build'
+        description: 'Anddea tag'
+        required: false
+        default: 'latest'
+      piko_tag:
+        description: 'Piko tag'
+        required: false
+        default: 'latest'
+      hoo_tag:
+        description: 'Hoo-dles tag'
+        required: false
+        default: 'latest'
+      rookie_tag:
+        description: 'RookieEnough tag'
+        required: false
+        default: 'latest'
+      tosox_tag:
+        description: 'Tosox tag'
+        required: false
+        default: 'latest'
+      yuzu_tag:
+        description: 'YuzuMikan404 tag'
+        required: false
+        default: 'latest'
+      dropped_tag:
+        description: 'Dropped-Patches tag'
         required: false
         default: 'latest'
       morphe_updated:
-        description: 'Whether Morphe was updated'
+        description: 'Whether Morphe (Official) was updated'
         required: false
         default: 'true'
       anddea_updated:
         description: 'Whether Anddea was updated'
         required: false
         default: 'true'
+      piko_updated:
+        description: 'Whether Piko was updated'
+        required: false
+        default: 'true'
+      hoo_updated:
+        description: 'Whether Hoo-dles was updated'
+        required: false
+        default: 'true'
+      rookie_updated:
+        description: 'Whether RookieEnough was updated'
+        required: false
+        default: 'true'
+      tosox_updated:
+        description: 'Whether Tosox was updated'
+        required: false
+        default: 'true'
+      yuzu_updated:
+        description: 'Whether YuzuMikan404 was updated'
+        required: false
+        default: 'true'
+      dropped_updated:
+        description: 'Whether Dropped-Patches was updated'
+        required: false
+        default: 'true'
+      reuse_apks_json:
+        description: 'JSON map of source -> APK asset URL to reuse (no rebuild needed)'
+        required: false
+        default: '{}'
 
 jobs:
   download-tools:
@@ -84,14 +136,39 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
       
-      - name: Read Patch Config
+      - name: Read Patch Config and Filter by Updated Sources
         id: read-matrix
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            const path = './my-patch-config.json';
-            const matrix = JSON.parse(fs.readFileSync(path, 'utf8')).patch_list;
+            const allItems = JSON.parse(fs.readFileSync('./my-patch-config.json', 'utf8')).patch_list;
+
+            // Map each source name (as used in my-patch-config) to the corresponding
+            // *_updated input flag.  Sources that share the Official Morphe CLI but
+            // use their own patch repo are keyed by their config source name.
+            const updatedMap = {
+              'morphe':         '${{ github.event.inputs.morphe_updated }}',
+              'revanced-anddea':'${{ github.event.inputs.anddea_updated }}',
+              'piko':           '${{ github.event.inputs.piko_updated }}',
+              'hoo':            '${{ github.event.inputs.hoo_updated }}',
+              'rookie':         '${{ github.event.inputs.rookie_updated }}',
+              'tosox':          '${{ github.event.inputs.tosox_updated }}',
+              'yuzu':           '${{ github.event.inputs.yuzu_updated }}',
+              'dropped':        '${{ github.event.inputs.dropped_updated }}',
+            };
+
+            // If ALL flags are the default 'true' (manual workflow_dispatch without
+            // specifying updates), build everything.  Otherwise filter to only
+            // sources whose patch was updated.
+            const allTrue = Object.values(updatedMap).every(v => v === 'true');
+            const matrix = allTrue
+              ? allItems
+              : allItems.filter(item => updatedMap[item.source] === 'true');
+
+            if (matrix.length === 0) {
+              core.warning('No sources were updated – nothing to build.');
+            }
             core.setOutput("matrix", JSON.stringify(matrix));
 
   build-apps:
@@ -196,23 +273,105 @@ jobs:
           echo "release_tag=$jst_time" >> $GITHUB_OUTPUT
           echo "Release tag: $jst_time"
       
+      - name: Download Reused APKs (sources not rebuilt this run)
+        if: steps.check-apks.outputs.skip_release == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REUSE_JSON: ${{ github.event.inputs.reuse_apks_json }}
+        run: |
+          mkdir -p ./release-apks
+          if [ -z "$REUSE_JSON" ] || [ "$REUSE_JSON" = "{}" ]; then
+            echo "No APKs to reuse."
+            exit 0
+          fi
+          echo "$REUSE_JSON" | python3 -c "
+          import json, sys, subprocess, os
+          data = json.load(sys.stdin)
+          for source, url in data.items():
+              print(f'Downloading reused APK for {source}: {url}')
+              fname = url.split('/')[-1]
+              subprocess.run(['curl', '-sL', '-H', f'Authorization: token {os.environ[\"GITHUB_TOKEN\"]}',
+                              url, '-o', f'./release-apks/{fname}'], check=False)
+          "
+
       - name: Generate Release Notes
         if: steps.check-apks.outputs.skip_release == 'false'
         id: notes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          morphe_tag="${{ github.event.inputs.morphe_tag }}"
-          anddea_tag="${{ github.event.inputs.anddea_tag }}"
+          # --- Resolve all source tags (never show "latest" as-is) ---
+          resolve_tag() {
+            local repo="$1" fallback="$2"
+            gh api "repos/${repo}/releases?per_page=1" --jq '.[0].tag_name' 2>/dev/null || echo "$fallback"
+          }
+
+          morphe_tag=$(resolve_tag "MorpheApp/morphe-patches"         "${{ github.event.inputs.morphe_tag }}")
+          anddea_tag=$(resolve_tag "anddea/revanced-patches"           "${{ github.event.inputs.anddea_tag }}")
+          piko_tag=$(resolve_tag   "crimera/piko"                      "${{ github.event.inputs.piko_tag }}")
+          hoo_tag=$(resolve_tag    "hoo-dles/morphe-patches"           "${{ github.event.inputs.hoo_tag }}")
+          rookie_tag=$(resolve_tag "RookieEnough/De-ReVanced"          "${{ github.event.inputs.rookie_tag }}")
+          tosox_tag=$(resolve_tag  "Tosox/revanced-patches"            "${{ github.event.inputs.tosox_tag }}")
+          yuzu_tag=$(resolve_tag   "YuzuMikan404/linegms-fork-second-" "${{ github.event.inputs.yuzu_tag }}")
+          dropped_tag=$(resolve_tag "indrastorms/Dropped-Patches"      "${{ github.event.inputs.dropped_tag }}")
+
           morphe_updated="${{ github.event.inputs.morphe_updated }}"
           anddea_updated="${{ github.event.inputs.anddea_updated }}"
+          piko_updated="${{ github.event.inputs.piko_updated }}"
+          hoo_updated="${{ github.event.inputs.hoo_updated }}"
+          rookie_updated="${{ github.event.inputs.rookie_updated }}"
+          tosox_updated="${{ github.event.inputs.tosox_updated }}"
+          yuzu_updated="${{ github.event.inputs.yuzu_updated }}"
+          dropped_updated="${{ github.event.inputs.dropped_updated }}"
 
-          # Always resolve actual tag names from GitHub API (never show "latest" as-is)
-          morphe_tag=$(gh api "repos/MorpheApp/morphe-patches/releases?per_page=1" --jq '.[0].tag_name' 2>/dev/null || echo "$morphe_tag")
-          anddea_tag=$(gh api "repos/anddea/revanced-patches/releases?per_page=1" --jq '.[0].tag_name' 2>/dev/null || echo "$anddea_tag")
-          
           jst_time=$(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M JST')
-          
+
+          # Helper: map filename -> friendly app name
+          get_app_name() {
+            local f="$1"
+            case "$f" in
+              *youtube-music*)   echo "YouTube Music" ;;
+              *youtube*)         echo "YouTube" ;;
+              *instagram*)       echo "Instagram" ;;
+              *prime-video*)     echo "Prime Video" ;;
+              *duolingo*)        echo "Duolingo" ;;
+              *ibs_paint*)       echo "ibis Paint X" ;;
+              *icon-packer*)     echo "Icon Packer" ;;
+              *nova*)            echo "Nova Launcher" ;;
+              *proton-vpn*)      echo "Proton VPN" ;;
+              *proton-mail*)     echo "Proton Mail" ;;
+              *smart_launcher*)  echo "Smart Launcher" ;;
+              *soundcloud*)      echo "SoundCloud" ;;
+              *wps-office*)      echo "WPS Office" ;;
+              *mega*)            echo "MEGA" ;;
+              *yuucho-tsucho*)   echo "ゆうちょ通帳アプリ" ;;
+              *yuucho-ninsho*)   echo "ゆうちょ認証アプリ" ;;
+              *disney-plus*)     echo "Disney+" ;;
+              *crunchyroll*)     echo "Crunchyroll" ;;
+              *adguard*)         echo "AdGuard" ;;
+              *tasker*)          echo "Tasker" ;;
+              *photomath*)       echo "Photomath" ;;
+              *pixiv*)           echo "pixiv" ;;
+              *)                 echo "$(basename "$f" .apk | sed 's/-arm64.*//' | sed 's/-universal.*//')" ;;
+            esac
+          }
+
+          # Helper: map filename -> patch source label and version
+          get_patch_info() {
+            local f="$1"
+            case "$f" in
+              *-morphe-v*|*-morphe-patches-*)  echo "Official Morphe|$morphe_tag" ;;
+              *-revanced-anddea-*)              echo "Anddea|$anddea_tag" ;;
+              *-piko-patches-*|*-piko-v*)       echo "Piko (crimera)|$piko_tag" ;;
+              *-morphe-patches-hoo-*|*-hoo-*)   echo "Hoo-dles|$hoo_tag" ;;
+              *-rookie-*|*De-ReVanced-*)        echo "RookieEnough|$rookie_tag" ;;
+              *-tosox-*|*-revanced-patches-*)   echo "Tosox|$tosox_tag" ;;
+              *-yuzu-*)                         echo "YuzuMikan404|$yuzu_tag" ;;
+              *-dropped-*)                      echo "Dropped-Patches|$dropped_tag" ;;
+              *)                                echo "Unknown|unknown" ;;
+            esac
+          }
+
           {
             echo "## Morphe AutoBuilds - $jst_time"
             echo ""
@@ -220,55 +379,53 @@ jobs:
             echo ""
             echo "| Filename | App | APK Version | Patch Source | Patch Version |"
             echo "| --- | --- | --- | --- | --- |"
-            
+
             for apk in ./release-apks/*.apk; do
+              [ -f "$apk" ] || continue
               filename=$(basename "$apk")
-              
-              if [[ "$filename" == *"youtube-music"* ]]; then
-                app="YouTube Music"
-              elif [[ "$filename" == *"youtube"* ]]; then
-                app="YouTube"
-              else
-                app="Unknown"
-              fi
-              
-              # Extract APK version from filename (e.g. youtube-arm64-v8a-morphe-v20.47.62.apk -> 20.47.62)
-              apk_version=$(echo "$filename" | grep -oP '(?<=-v)\d+[\d.]+' | tail -1)
-              
-              if [[ "$filename" == *"revanced-anddea"* ]]; then
-                source="Anddea"
-                patch_version="$anddea_tag"
-              else
-                source="Official Morphe"
-                patch_version="$morphe_tag"
-              fi
-              
-              echo "| $filename | $app | $apk_version | $source | $patch_version |"
+              app=$(get_app_name "$filename")
+              apk_version=$(echo "$filename" | grep -oP '(?<=-v)\d+[\d.]+(?=[^/]*\.apk)' | tail -1)
+              patch_info=$(get_patch_info "$filename")
+              source_label="${patch_info%%|*}"
+              patch_ver="${patch_info##*|}"
+              echo "| $filename | $app | ${apk_version:-N/A} | $source_label | $patch_ver |"
             done
-            
+
             echo ""
             echo "## Patch Versions"
             echo ""
             echo "| Patch Source | Version | Status |"
             echo "| --- | --- | --- |"
-            
-            if [ "$morphe_updated" = "true" ]; then
-              echo "| Official Morphe | $morphe_tag | 🆕 Updated |"
-            else
-              echo "| Official Morphe | $morphe_tag | No changes |"
-            fi
-            
-            if [ "$anddea_updated" = "true" ]; then
-              echo "| Anddea | $anddea_tag | 🆕 Updated |"
-            else
-              echo "| Anddea | $anddea_tag | No changes |"
-            fi
-            
+
+            emit_patch_row() {
+              local label="$1" tag="$2" updated="$3"
+              if [ "$updated" = "true" ]; then
+                echo "| $label | $tag | 🆕 Updated |"
+              else
+                echo "| $label | $tag | ✅ No changes (reused last build) |"
+              fi
+            }
+
+            emit_patch_row "Official Morphe"  "$morphe_tag"  "$morphe_updated"
+            emit_patch_row "Anddea"            "$anddea_tag"  "$anddea_updated"
+            emit_patch_row "Piko (crimera)"    "$piko_tag"    "$piko_updated"
+            emit_patch_row "Hoo-dles"          "$hoo_tag"     "$hoo_updated"
+            emit_patch_row "RookieEnough"      "$rookie_tag"  "$rookie_updated"
+            emit_patch_row "Tosox"             "$tosox_tag"   "$tosox_updated"
+            emit_patch_row "YuzuMikan404"      "$yuzu_tag"    "$yuzu_updated"
+            emit_patch_row "Dropped-Patches"   "$dropped_tag" "$dropped_updated"
+
             echo ""
             echo "## Patch Sources"
             echo ""
             echo "- **Official Morphe**: https://github.com/MorpheApp/morphe-patches/releases/tag/$morphe_tag"
             echo "- **Anddea**: https://github.com/anddea/revanced-patches/releases/tag/$anddea_tag"
+            echo "- **Piko (crimera)**: https://github.com/crimera/piko/releases/tag/$piko_tag"
+            echo "- **Hoo-dles**: https://github.com/hoo-dles/morphe-patches/releases/tag/$hoo_tag"
+            echo "- **RookieEnough**: https://github.com/RookieEnough/De-ReVanced/releases/tag/$rookie_tag"
+            echo "- **Tosox**: https://github.com/Tosox/revanced-patches/releases/tag/$tosox_tag"
+            echo "- **YuzuMikan404**: https://github.com/YuzuMikan404/linegms-fork-second-/releases/tag/$yuzu_tag"
+            echo "- **Dropped-Patches**: https://github.com/indrastorms/Dropped-Patches/releases/tag/$dropped_tag"
             echo ""
             echo "## Notes"
             echo ""
@@ -276,7 +433,7 @@ jobs:
             echo "- Uninstall existing app before installation"
             echo "- These APKs are auto-built. Use at your own risk."
           } > release_notes.md
-          
+
           echo "Release notes generated"
       
       - name: Create Release
