@@ -1,100 +1,100 @@
 {
-  "patch_list": [
-    {
-      "app_name": "youtube",
-      "source": "morphe"
-    },
-    {
-      "app_name": "youtube",
-      "source": "revanced-anddea"
-    },
-    {
-      "app_name": "youtube-music",
-      "source": "morphe"
-    },
-    {
-      "app_name": "youtube-music",
-      "source": "revanced-anddea"
-    },
-    {
-      "app_name": "instagram",
-      "source": "piko"
-    },
-    {
-      "app_name": "adguard",
-      "source": "hoo"
-    },
-    {
-      "app_name": "prime-video",
-      "source": "hoo"
-    },
-    {
-      "app_name": "duolingo",
-      "source": "hoo"
-    },
-    {
-      "app_name": "ibs_paint",
-      "source": "hoo"
-    },
-    {
-      "app_name": "icon-packer",
-      "source": "hoo"
-    },
-    {
-      "app_name": "nova",
-      "source": "hoo"
-    },
-    {
-      "app_name": "proton-vpn",
-      "source": "hoo"
-    },
-    {
-      "app_name": "smart_launcher",
-      "source": "hoo"
-    },
-    {
-      "app_name": "soundcloud",
-      "source": "hoo"
-    },
-    {
-      "app_name": "wps-office",
-      "source": "hoo"
-    },
-    {
-      "app_name": "mega",
-      "source": "tosox"
-    },
-    {
-      "app_name": "proton-mail",
-      "source": "rookie"
-    },
-    {
-      "app_name": "yuucho-tsucho",
-      "source": "yuzu"
-    },
-    {
-      "app_name": "yuucho-ninsho",
-      "source": "yuzu"
-    },
-    {
-      "app_name": "disney-plus",
-      "source": "rookie"
-    },
-    {
-      "app_name": "crunchyroll",
-      "source": "hoo"
-    },
-    {
-      "app_name": "tasker",
-      "source": "dropped"
-    },
-    {
-      "app_name": "photomath",
-      "source": "rookie"
-    },
-    {
-      "app_name": "pixiv",
-      "source": "rookie"
-    }
-  ]
+    "patch_list": [
+        {
+            "app_name": "youtube",
+            "source": "morphe"
+        },
+        {
+            "app_name": "youtube",
+            "source": "revanced-anddea"
+        },
+        {
+            "app_name": "youtube-music",
+            "source": "morphe"
+        },
+        {
+            "app_name": "youtube-music",
+            "source": "revanced-anddea"
+        },
+        {
+            "app_name": "instagram",
+            "source": "piko"
+        },
+        {
+            "app_name": "adguard",
+            "source": "hoo"
+        },
+        {
+            "app_name": "prime-video",
+            "source": "hoo"
+        },
+        {
+            "app_name": "duolingo",
+            "source": "hoo"
+        },
+        {
+            "app_name": "ibs_paint",
+            "source": "hoo"
+        },
+        {
+            "app_name": "icon-packer",
+            "source": "hoo"
+        },
+        {
+            "app_name": "nova",
+            "source": "hoo"
+        },
+        {
+            "app_name": "proton-vpn",
+            "source": "hoo"
+        },
+        {
+            "app_name": "smart_launcher",
+            "source": "hoo"
+        },
+        {
+            "app_name": "soundcloud",
+            "source": "hoo"
+        },
+        {
+            "app_name": "wps-office",
+            "source": "hoo"
+        },
+        {
+            "app_name": "mega",
+            "source": "tosox"
+        },
+        {
+            "app_name": "proton-mail",
+            "source": "rookie"
+        },
+        {
+            "app_name": "yuucho-tsucho",
+            "source": "github"
+        },
+        {
+            "app_name": "yuucho-ninsho",
+            "source": "github"
+        },
+        {
+            "app_name": "disney-plus",
+            "source": "rookie"
+        },
+        {
+            "app_name": "crunchyroll",
+            "source": "hoo"
+        },
+        {
+            "app_name": "tasker",
+            "source": "dropped"
+        },
+        {
+            "app_name": "photomath",
+            "source": "rookie"
+        },
+        {
+            "app_name": "pixiv",
+            "source": "rookie"
+        }
+    ]
 }
