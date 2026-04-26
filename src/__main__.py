@@ -205,6 +205,7 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
         logging.info("🔧 Using ReVanced patching system...")
         cli_name = Path(cli).name.lower()
         is_revanced_v6_or_newer = any(f'revanced-cli-{v}' in cli_name for v in ['6', '7', '8'])
+        is_revanced_v4 = 'revanced-cli-4' in cli_name or (not is_revanced_v6_or_newer and cli_name.endswith('-all.jar'))
 
         if is_revanced_v6_or_newer:
             utils.run_process([
@@ -212,6 +213,18 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
                 "patch", "-p", str(patches), "-b",
                 "--out", str(output_apk), str(input_apk),
                 *exclude_patches, *include_patches
+            ], stream=True)
+        elif is_revanced_v4:
+            # ReVanced CLI v4: -b/--patch-bundle, -i/--include, -e/--exclude, --exclusive
+            exclusive_flag = ["--exclusive"] if include_patches else []
+            utils.run_process([
+                "java", "-jar", str(cli),
+                "patch",
+                "-b", str(patches),
+                "--out", str(output_apk),
+                *exclusive_flag,
+                *exclude_patches, *include_patches,
+                str(input_apk),
             ], stream=True)
         else:
             utils.run_process([
