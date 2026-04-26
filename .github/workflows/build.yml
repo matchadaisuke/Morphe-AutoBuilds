@@ -138,29 +138,35 @@ jobs:
       
       - name: Read Patch Config and Filter by Updated Sources
         id: read-matrix
+        env:
+          UPD_MORPHE:   ${{ github.event.inputs.morphe_updated }}
+          UPD_ANDDEA:   ${{ github.event.inputs.anddea_updated }}
+          UPD_PIKO:     ${{ github.event.inputs.piko_updated }}
+          UPD_HOO:      ${{ github.event.inputs.hoo_updated }}
+          UPD_ROOKIE:   ${{ github.event.inputs.rookie_updated }}
+          UPD_TOSOX:    ${{ github.event.inputs.tosox_updated }}
+          UPD_YUZU:     ${{ github.event.inputs.yuzu_updated }}
+          UPD_DROPPED:  ${{ github.event.inputs.dropped_updated }}
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
             const allItems = JSON.parse(fs.readFileSync('./my-patch-config.json', 'utf8')).patch_list;
 
-            // Map each source name (as used in my-patch-config) to the corresponding
-            // *_updated input flag.  Sources that share the Official Morphe CLI but
-            // use their own patch repo are keyed by their config source name.
+            // Read updated flags from env vars (safe: no dynamic ${{ }} inside expressions)
             const updatedMap = {
-              'morphe':         '${{ github.event.inputs.morphe_updated }}',
-              'revanced-anddea':'${{ github.event.inputs.anddea_updated }}',
-              'piko':           '${{ github.event.inputs.piko_updated }}',
-              'hoo':            '${{ github.event.inputs.hoo_updated }}',
-              'rookie':         '${{ github.event.inputs.rookie_updated }}',
-              'tosox':          '${{ github.event.inputs.tosox_updated }}',
-              'yuzu':           '${{ github.event.inputs.yuzu_updated }}',
-              'dropped':        '${{ github.event.inputs.dropped_updated }}',
+              'morphe':          process.env.UPD_MORPHE,
+              'revanced-anddea': process.env.UPD_ANDDEA,
+              'piko':            process.env.UPD_PIKO,
+              'hoo':             process.env.UPD_HOO,
+              'rookie':          process.env.UPD_ROOKIE,
+              'tosox':           process.env.UPD_TOSOX,
+              'yuzu':            process.env.UPD_YUZU,
+              'dropped':         process.env.UPD_DROPPED,
             };
 
-            // If ALL flags are the default 'true' (manual workflow_dispatch without
-            // specifying updates), build everything.  Otherwise filter to only
-            // sources whose patch was updated.
+            // If ALL flags are 'true' (manual dispatch with defaults), build everything.
+            // Otherwise build only updated sources.
             const allTrue = Object.values(updatedMap).every(v => v === 'true');
             const matrix = allTrue
               ? allItems
