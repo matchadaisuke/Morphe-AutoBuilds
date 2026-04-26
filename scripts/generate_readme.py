@@ -58,8 +58,8 @@ def generate_readme(build_info: dict, apk_list: list) -> str:
 
 ## 🔗 パッチソース
 
-- **Official Morphe**: https://github.com/MorpheApp/morphe-patches/releases/tag/{morphe_tag}
-- **Anddea**: https://github.com/anddea/revanced-patches/releases/tag/{anddea_tag}
+- **Official Morphe**: [https://github.com/MorpheApp/morphe-patches/releases/latest](https://github.com/MorpheApp/morphe-patches/releases/latest)
+- **Anddea**: [https://github.com/anddea/revanced-patches/releases/latest](https://github.com/anddea/revanced-patches/releases/latest)
 
 ## 📱 インストール方法
 

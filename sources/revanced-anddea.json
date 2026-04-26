@@ -3,13 +3,13 @@
         "name": "revanced-anddea"
     },
     {
-        "user": "inotia00",
-        "repo": "revanced-cli",
+        "user": "MorpheApp",
+        "repo": "morphe-cli",
         "tag": "latest"
     },
     {
         "user": "anddea",
         "repo": "revanced-patches",
-        "tag": "latest"
+        "tag": "latest-tag"
     }
 ]
