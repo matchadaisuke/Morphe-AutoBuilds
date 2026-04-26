@@ -66,8 +66,17 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
     else:
         # Find ReVanced files
         cli = utils.find_file(download_files, contains="revanced-cli", suffix=".jar")
+        # Patch file can be .rvp (standard ReVanced) or .mpp (Morphe-format, e.g. anddea)
         patches = utils.find_file(download_files, contains="patches", suffix=".rvp")
-        
+
+        if not patches:
+            # Some ReVanced forks (e.g. anddea) ship .mpp patch files with a ReVanced CLI
+            patches = utils.find_file(download_files, contains="patches", suffix=".mpp")
+
+        if not patches:
+            # Fallback: any .mpp file present
+            patches = utils.find_file(download_files, suffix=".mpp")
+
         if not patches:
             # Try .jar extension for patches
             patches = utils.find_file(download_files, contains="patches", suffix=".jar")
@@ -189,6 +198,11 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
     output_apk = Path(f"{app_name}-{arch}-patch-v{version}.apk")
 
     # USE DIFFERENT COMMANDS BASED ON SOURCE TYPE
+    # A .mpp patch file always requires Morphe-style patching,
+    # even when the CLI binary is revanced-cli (e.g. revanced-anddea).
+    if patches.suffix == ".mpp":
+        is_morphe = True
+
     if is_morphe:
         logging.info("🔧 Using Morphe patching system...")
         # Morphe CLI might have different arguments - we need to test this
