@@ -11,9 +11,22 @@ from src import (
     github
 )
 
-def download_resource(url: str, name: str = None) -> Path:
-    res = session.get(url, stream=True)
-    res.raise_for_status()
+def download_resource(url: str, name: str = None, retries: int = 3) -> Path:
+    last_err = None
+    for attempt in range(1, retries + 1):
+        try:
+            res = session.get(url, stream=True)
+            res.raise_for_status()
+            break
+        except Exception as e:
+            last_err = e
+            if attempt < retries:
+                import time
+                wait = attempt * 5
+                logging.warning(f"download_resource: attempt {attempt} failed ({e}), retrying in {wait}s...")
+                time.sleep(wait)
+            else:
+                raise last_err
     final_url = res.url
 
     if not name:
