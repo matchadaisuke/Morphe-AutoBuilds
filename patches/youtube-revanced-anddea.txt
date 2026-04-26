@@ -1,0 +1,5 @@
+# YouTube × Anddea パッチ除外ルール
+# - で始まる行 = 除外（ブラックリスト）
+# + で始まる行 = 強制含有
+- Custom branding name for YouTube
+- Custom branding icon for YouTube

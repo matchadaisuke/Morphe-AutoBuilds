@@ -1,37 +1,4 @@
-[
-  {
-    "app_name": "youtube-music",
-    "source": "morphe",
-    "arches": ["arm64-v8a", "armeabi-v7a"]
-  },
-  {
-    "app_name": "google-photos",
-    "source": "rookie",
-    "arches": ["arm64-v8a", "armeabi-v7a"]
-  },
-  {
-    "app_name": "cake",
-    "source": "custom-patches",
-    "arches": ["arm64-v8a", "armeabi-v7a"]
-  },
-    {
-    "app_name": "instagram",
-    "source": "piko-dev",
-    "arches": ["arm64-v8a", "armeabi-v7a"]
-  },
-  {
-    "app_name": "phone",
-    "source": "taknok",
-    "arches": ["arm64-v8a", "armeabi-v7a"]
-  },
-  {
-    "app_name": "pokecardex",
-    "source": "almewty",
-    "arches": ["arm64-v8a", "armeabi-v7a"]
-  },
-  {
-    "app_name": "messenger",
-    "source": "revanced",
-    "arches": ["arm64-v8a", "armeabi-v7a"]
-  }
-]
+{
+  "youtube": { "arch": ["arm64-v8a"] },
+  "youtube-music": { "arch": ["arm64-v8a"] }
+}

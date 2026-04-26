@@ -1,0 +1,8 @@
+{
+  "patch_list": [
+    { "app_name": "youtube", "source": "morphe" },
+    { "app_name": "youtube", "source": "revanced-anddea" },
+    { "app_name": "youtube-music", "source": "morphe" },
+    { "app_name": "youtube-music", "source": "revanced-anddea" }
+  ]
+}

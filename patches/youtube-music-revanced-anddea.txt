@@ -1,0 +1,4 @@
+# YouTube Music × Anddea パッチ除外ルール
+# - で始まる行 = 除外（ブラックリスト）
+# + で始まる行 = 強制含有
+- AddResourcesPatch

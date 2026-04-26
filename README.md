@@ -1,144 +1,168 @@
 <div align="center">
 
-# 🔧 Morphe Non-Root Builder
+# 🚀 Morphe AutoBuilds
 
-[![Daily Build](https://img.shields.io/github/actions/workflow/status/RookieEnough/Revanced-AutoBuilds/patch.yml?label=Daily%20Build&style=for-the-badge&color=2ea44f)](https://github.com/RookieEnough/Revanced-AutoBuilds/actions/workflows/patch.yml)
-[![Latest Release](https://img.shields.io/github/v/release/RookieEnough/Revanced-AutoBuilds?style=for-the-badge&label=Latest%20Release&color=0366d6)](https://github.com/RookieEnough/Revanced-AutoBuilds/releases/latest)
+[![Upstream Check](https://img.shields.io/github/actions/workflow/status/YOUR_USERNAME/morphe-autobuilds/check-upstream.yml?label=Upstream%20Check&style=for-the-badge&color=2ea44f)](https://github.com/YOUR_USERNAME/morphe-autobuilds/actions/workflows/check-upstream.yml)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/YOUR_USERNAME/morphe-autobuilds/build.yml?label=Build%20Status&style=for-the-badge&color=0366d6)](https://github.com/YOUR_USERNAME/morphe-autobuilds/actions/workflows/build.yml)
+[![Latest Release](https://img.shields.io/github/v/release/YOUR_USERNAME/morphe-autobuilds?style=for-the-badge&label=Latest%20Release&color=orange)](https://github.com/YOUR_USERNAME/morphe-autobuilds/releases/latest)
 [![Python Version](https://img.shields.io/badge/Python-3.11%2B-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![License](https://img.shields.io/github/license/RookieEnough/Revanced-AutoBuilds?style=for-the-badge&color=orange)](LICENSE)
-
-
-<div align="center">
-  <a href="https://rookiezz.gumroad.com/l/hrpyb">
-    <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Coin.png" alt="Coin" width="40" height="40" />
-    <br>
-    <img src="https://img.shields.io/badge/Support_Project-Gold?style=for-the-badge&logoColor=black&labelColor=white" alt="Support Badge" />
-  </a>
-</div>
-
-
 
 <p align="center">
-  <strong>Professional, Automated ReVanced APK Builder</strong><br>
-  Multi-source • Multi-architecture • GitHub Actions Powered
+  <strong>Automated YouTube & YouTube Music APK Builder</strong><br>
+  Official Morphe + Anddea Patches • GitHub Actions Powered • JST-Tagged Releases
 </p>
 
 <p align="center">
-A sophisticated, automated pipeline that builds ready-to-install Morphe applications for <strong>non-rooted Android devices</strong>. This system automatically fetches the latest Morphe tools, downloads base APKs from multiple sources, applies patches, and publishes optimized APKs with architecture-specific builds.
+  A sophisticated, automated pipeline that builds ready-to-install YouTube and YouTube Music APKs with Official Morphe and Anddea patches. This system automatically monitors upstream releases, downloads base APKs, applies patches, and publishes optimized arm64-v8a builds with integrated release notes.
 </p>
 
-[![View Latest Release](https://img.shields.io/badge/View%20Latest%20Release-0A0A0A?style=flat&logo=github&logoColor=white)](https://github.com/RookieEnough/Revanced-AutoBuilds/releases/latest)
-[![Report Bug](https://img.shields.io/badge/Report%20Bug-0A0A0A?style=flat&logo=github&logoColor=white)](https://github.com/RookieEnough/Revanced-AutoBuilds/issues)
-[![Request Feature](https://img.shields.io/badge/Request%20Feature-0A0A0A?style=flat&logo=github&logoColor=white)](https://github.com/RookieEnough/Revanced-AutoBuilds/issues)
-
+[![View Latest Release](https://img.shields.io/badge/View%20Latest%20Release-0A0A0A?style=flat&logo=github&logoColor=white)](https://github.com/YOUR_USERNAME/morphe-autobuilds/releases/latest)
+[![Report Bug](https://img.shields.io/badge/Report%20Bug-0A0A0A?style=flat&logo=github&logoColor=white)](https://github.com/YOUR_USERNAME/morphe-autobuilds/issues)
+[![View Docs](https://img.shields.io/badge/View%20Docs-0A0A0A?style=flat&logo=github&logoColor=white)](./IMPLEMENTATION.md)
 
 </div>
 
 ---
 
-## ⚡ Quick Downloads
+## ⚡ Quick Start
 
-> **Note:** All APKs are automatically rebuilt daily at 06:00 UTC to ensure you have the latest features and security patches.
+> **Note:** All APKs are automatically built when Official Morphe or Anddea releases a new version. Releases are tagged with JST timestamps (e.g., `2026-04-21_15-30-JST`).
 
-### 📥 Download Links
+### 📥 Download Latest APKs
 
-| Mirror | Description | Link |
+| App | Morphe | Anddea |
 | :--- | :--- | :--- |
-| **GitHub Releases** | Primary source. Contains all builds. | [**Download Latest Release**](https://RookieEnough/morphe-AutoBuilds/releases/latest) |
+| **YouTube** | [Download](https://github.com/YOUR_USERNAME/morphe-autobuilds/releases/latest) | [Download](https://github.com/YOUR_USERNAME/morphe-autobuilds/releases/latest) |
+| **YouTube Music** | [Download](https://github.com/YOUR_USERNAME/morphe-autobuilds/releases/latest) | [Download](https://github.com/YOUR_USERNAME/morphe-autobuilds/releases/latest) |
 
-### 📱 Supported Apps & Architectures
+### 📱 Supported Configuration
 
-| Application | arm64-v8a | armeabi-v7a | Universal |
-| :--- | :---: | :---: | :---: |
-| **YouTube** | ✅ | ✅ | ✅ |
-| **YouTube Music** | ✅ | ✅ | ❌ |
-| **Reddit** | ❌ | ❌ | ✅ |
-| **Twitter (X)** | ✅ | ❌ | ❌ |
-| **TikTok** | ❌ | ❌ | ✅ |
-| **Spotify** | ❌ | ❌ | ✅ |
-
-*( Legend: ✅ = Available / ❌ = Not configured )*
+| App | Patch Source | Architecture |
+| :--- | :--- | :--- |
+| **YouTube** | Official Morphe | arm64-v8a |
+| **YouTube** | Anddea | arm64-v8a |
+| **YouTube Music** | Official Morphe | arm64-v8a |
+| **YouTube Music** | Anddea | arm64-v8a |
 
 ---
 
 ## ✨ Key Features
 
-This repository utilizes a robust Python-based pipeline to ensure high reliability and optimization.
+* **Upstream-Triggered Builds:** Automatically detects when Official Morphe or Anddea releases a new version and triggers builds immediately.
+* **Integrated Release Strategy:** All APKs are released together with a single JST-timestamped tag, ensuring consistency across all builds.
+* **Smart Patch Control:** Text-based patch filter files allow precise inclusion or exclusion of specific patches per app/source combination.
+* **Optimized Architecture:** arm64-v8a only for modern Android devices, reducing file size while maintaining compatibility.
+* **Automated Release Notes:** README.md and detailed release notes are automatically generated with version info and update status.
+* **GitHub Actions Powered:** Zero manual intervention required—everything runs on GitHub's infrastructure.
+* **Reproducible Builds:** Previous APK versions are preserved in release history, allowing users to downgrade if needed.
 
-* **Fully Automated:** GitHub Actions workflow executes daily at 06:00 UTC, requiring zero manual intervention.
-* **Architecture Optimization:** Builds specific `arm64-v8a`, `armeabi-v7a`, and `universal` APKs to reduce file size and improve performance on target devices.
-* **Multi-Source Strategy:** Intelligent fetching from APKMirror, APKPure, and Uptodown ensures high success rates even if one source is down.
-* **Granular Patch Control:** Simple text-based configuration allows for precise inclusion or exclusion of specific patches.
-* **Smart Failover:** The system automatically switches download sources if a fetch attempt fails.
-* **Auto-Signing:** All APKs are signed with a consistent public keystore, making them ready to install immediately.
-* **Clean Release Cycle:** Previous releases are replaced rather than archived, preventing clutter and making it easy for external managers (like Orion) to track updates.
+---
+
+## 📋 System Architecture
+
+### Workflow Components
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ check-upstream.yml (Daily 6:00 UTC)                         │
+│ - Fetch latest Morphe & Anddea tags                         │
+│ - Compare with stored Variables                             │
+│ - Trigger build.yml if updates found                        │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│ build.yml (Triggered on upstream update)                    │
+│ - Download Morphe & Anddea tools                            │
+│ - Build 4 APK combinations in parallel                      │
+│ - Generate README.md                                        │
+│ - Create JST-timestamped release                            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Build Matrix
+
+The system builds 4 APK combinations automatically:
+
+1. YouTube × Official Morphe
+2. YouTube × Anddea
+3. YouTube Music × Official Morphe
+4. YouTube Music × Anddea
 
 ---
 
 ## 🛠️ Repository Structure
 
-```text
-revanced-nonroot/
-├── .github/workflows/      # GitHub Actions automation
-│   ├── patch.yml           # Daily automated builds (06:00 UTC)
-│   └── manual-patch.yml    # Manual trigger workflow
-├── apps/                   # APK source configurations
-│   ├── apkmirror/          # APKMirror definitions
-│   ├── apkpure/            # APKPure definitions
-│   └── uptodown/           # UptoDown definitions
-├── patches/                # Patch inclusion/exclusion rules
-├── sources/                # ReVanced tool source definitions
-├── src/                    # Core Python build logic
-├── arch-config.json        # Architecture build matrix
-├── patch-config.json       # App build configuration
-└── requirements.txt        # Project dependencies
-
+```
+morphe-autobuilds/
+├── .github/workflows/
+│   ├── check-upstream.yml      # Upstream monitoring workflow
+│   └── build.yml               # Build & release workflow
+├── apps/apkmirror/
+│   ├── youtube.json            # YouTube APKMirror config
+│   └── youtube-music.json      # YouTube Music APKMirror config
+├── patches/
+│   ├── youtube-morphe.txt
+│   ├── youtube-revanced-anddea.txt
+│   ├── youtube-music-morphe.txt
+│   └── youtube-music-revanced-anddea.txt
+├── scripts/
+│   └── generate_readme.py      # README.md auto-generation script
+├── sources/
+│   ├── morphe.json             # Morphe tool sources
+│   └── revanced-anddea.json    # Anddea tool sources
+├── src/                        # Core build logic (Python)
+├── my-patch-config.json        # Target apps & sources
+├── arch-config.json            # Architecture configuration
+├── IMPLEMENTATION.md           # Implementation details
+├── SETUP.md                    # Setup instructions
+└── README.md                   # This file
 ```
 
 ---
 
 ## ⚙️ Configuration Guide
 
-This builder is highly configurable. You can adjust the following files to customize the build output.
+### 1. Target Apps (`my-patch-config.json`)
 
-### 1. App Selection (`patch-config.json`)
-
-Define which applications the pipeline should attempt to build.
+Define which app/source combinations to build:
 
 ```json
 {
   "patch_list": [
     { "app_name": "youtube", "source": "morphe" },
+    { "app_name": "youtube", "source": "revanced-anddea" },
     { "app_name": "youtube-music", "source": "morphe" },
-    { "app_name": "X", "source": "crimera" }
+    { "app_name": "youtube-music", "source": "revanced-anddea" }
   ]
 }
-
 ```
 
-### 2. Architecture Matrix (`arch-config.json`)
+### 2. Architecture (`arch-config.json`)
 
-Specify which CPU architectures to target for each application.
+Specify target architectures:
 
 ```json
-[
-  {
-    "app_name": "youtube",
-    "source": "morphe",
-    "arches": ["arm64-v8a", "armeabi-v7a", "universal"]
-  },
-  {
-    "app_name": "youtube-music",
-    "source": "morphe",
-    "arches": ["arm64-v8a", "armeabi-v7a"]
-  }
-]
-
+{
+  "youtube": { "arch": ["arm64-v8a"] },
+  "youtube-music": { "arch": ["arm64-v8a"] }
+}
 ```
 
-### 3. Source Definitions
+### 3. Patch Filters
 
-Located in the `apps/` directory. Example for `apps/apkmirror/youtube.json`:
+Located in `patches/`. Use `-` to exclude patches and `+` to force include:
+
+**Example: `patches/youtube-revanced-anddea.txt`**
+```text
+# YouTube × Anddea patch rules
+- Custom branding name for YouTube
+- Custom branding icon for YouTube
+```
+
+### 4. APK Sources
+
+Located in `apps/apkmirror/`. Example for YouTube:
 
 ```json
 {
@@ -150,127 +174,116 @@ Located in the `apps/` directory. Example for `apps/apkmirror/youtube.json`:
   "package": "com.google.android.youtube",
   "version": ""
 }
-
-```
-
-### 4. Patch Rules
-
-Located in `patches/`. Example for `patches/youtube-morphe.txt`. Use `+` to force include and `-` to exclude.
-
-```text
-# Essential patches
-+ microg-support
-+ premium-heading
-+ hide-infocard-suggestions
-
-# Exclusions
-- custom-branding
-- amoled
-
 ```
 
 ---
 
-## 🚀 Local Build Instructions
-
-If you prefer to build the APKs on your own machine, follow these steps.
+## 🚀 Getting Started
 
 ### Prerequisites
 
-* Python 3.11 or higher
-* Java Runtime Environment (JRE)
-* `zip` utility
-* `apksigner` (part of Android SDK Build-Tools)
+* GitHub repository with Actions enabled
+* GitHub CLI (`gh`) installed
+* Python 3.11+
 
-### Installation & Execution
+### Setup Instructions
 
-1. **Clone the repository:**
+See [SETUP.md](./SETUP.md) for detailed setup instructions, including:
+
+1. Repository Variables initialization
+2. GitHub Actions configuration
+3. Manual testing procedures
+4. PAT (Personal Access Token) setup
+5. Troubleshooting guide
+
+**Quick setup:**
 ```bash
-git clone https://github.com/RookieEnough/morphe-AutoBuilds.git
-cd morphe-nonroot
+# Initialize Variables
+gh variable set LAST_MORPHE_TAG --body "v1.13.2"
+gh variable set LAST_ANDDEA_TAG --body "v5.4.0-all"
 
+# Test build workflow
+gh workflow run build.yml
+
+# Test upstream check
+gh workflow run check-upstream.yml
 ```
-
-
-2. **Install dependencies:**
-```bash
-pip install -r requirements.txt
-pip install requests beautifulsoup4
-
-```
-
-
-3. **Run the build:**
-You can build for a specific app and source.
-```bash
-export APP_NAME="youtube"
-export SOURCE="morphe"
-python -m src
-
-```
-
-
-4. **Target specific architecture (Optional):**
-```bash
-export APP_NAME="youtube"
-export SOURCE="morphe"
-export ARCH="arm64-v8a"  # Options: arm64-v8a, armeabi-v7a, universal
-python -m src
-
-```
-
-
 
 ---
 
-## 🔄 GitHub Actions Workflows
+## 📚 Documentation
 
-### Daily Automated Build (`patch.yml`)
+* **[IMPLEMENTATION.md](./IMPLEMENTATION.md)** - Detailed implementation documentation
+* **[SETUP.md](./SETUP.md)** - Complete setup and configuration guide
+* **[Design Document](./morphe-autobuild-設計書_v2.docx)** - Original design specification (Japanese)
 
-* **Schedule:** Runs daily at 06:00 UTC.
-* **Function:** Iterates through all configured apps and architectures.
-* **Output:** Updates the single "Latest" release tag.
+---
 
-### Manual Build (`manual-patch.yml`)
+## 🔄 Release Tagging
 
-* **Trigger:** Manually via the GitHub Actions "Run workflow" button.
-* **Capabilities:**
-* Target specific apps.
-* Target specific architectures.
-* Force specific APK versions.
-* Option to update the public release or just build artifacts.
+Releases are tagged with JST timestamps in the format: `YYYY-MM-DD_HH-MM-JST`
 
+**Example:** `2026-04-21_15-30-JST`
 
+Each release includes:
+- 4 APK files (YouTube/YTMusic × Morphe/Anddea)
+- README.md with installation instructions
+- Detailed release notes with version information
+
+---
+
+## 🔗 Patch Sources
+
+* **Official Morphe**: https://github.com/MorpheApp/morphe-patches
+* **Anddea**: https://github.com/anddea/revanced-patches
+
+---
+
+## 📥 Installation Instructions
+
+1. Download the desired APK from the latest release
+2. Enable "Unknown sources" on your Android device
+3. Uninstall the existing YouTube/YouTube Music app
+4. Install the downloaded APK
+5. (Optional) Install MicroG-RE for full functionality
+
+---
+
+## ⚠️ Disclaimer
+
+* These APKs are built automatically using official Morphe and Anddea tools
+* **Not officially affiliated** with Morphe or Anddea teams
+* Use at your own risk
+* MicroG-RE may be required for full functionality
+* Always backup your data before installing modified APKs
 
 ---
 
 ## 🤝 Contributing
 
-Contributions to improve the toolchain or add support for new apps are welcome.
+Contributions are welcome! To contribute:
 
-1. **Fork** the repository.
-2. **Create** a feature branch (`git checkout -b feature/new-app`).
-3. **Test** your changes locally using the Python scripts.
-4. **Commit** your changes (`git commit -m "Add support for new-app"`).
-5. **Push** to the branch (`git push origin feature/new-app`).
-6. **Open** a Pull Request.
+1. Fork the repository
+2. Create a feature branch
+3. Test your changes locally
+4. Submit a pull request
 
 ---
 
-## ⚠️ Disclaimer & Legal
+## 📞 Support
 
-> **Important:** This project is an automated build tool. The APKs provided in the releases are generated automatically using official Morphe tools and patches.
+For issues or questions:
 
-* **Affiliation:** These builds are **not** officially affiliated with the Morphe Team.
-* **Usage:** Provided for educational and convenience purposes only. Use at your own risk.
-* **GmsCore:** Morphe's MicroG-RE is required for these non-root apps to function correctly.
-* **Updates:** Patches are automatically pulled from the latest sources; builds may occasionally contain experimental features.
+1. Check [SETUP.md](./SETUP.md) troubleshooting section
+2. Review [IMPLEMENTATION.md](./IMPLEMENTATION.md) for technical details
+3. Open an issue on GitHub
 
 ---
 
 <div align="center">
 
-**If you found this project helpful, please consider giving it a ⭐ Star.**  
-<br>
-**Made with 💜 by RookieZ**
+**If you found this project helpful, please consider giving it a ⭐ Star.**
 
+Made with 💜 by the Morphe AutoBuilds Community
+
+</div>

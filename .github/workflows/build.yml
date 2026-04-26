@@ -1,0 +1,326 @@
+name: Build and Release APKs
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  workflow_dispatch:
+    inputs:
+      morphe_tag:
+        description: 'Morphe tag to build'
+        required: false
+        default: 'latest'
+      anddea_tag:
+        description: 'Anddea tag to build'
+        required: false
+        default: 'latest'
+      morphe_updated:
+        description: 'Whether Morphe was updated'
+        required: false
+        default: 'true'
+      anddea_updated:
+        description: 'Whether Anddea was updated'
+        required: false
+        default: 'true'
+
+jobs:
+  download-tools:
+    name: Download Build Tools
+    runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.cache-key }}
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      
+      - name: Download Morphe Tools
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p tools
+          
+          echo "Downloading Morphe CLI..."
+          curl -L "https://github.com/MorpheApp/morphe-cli/releases/latest/download/morphe-cli.jar" \
+            -o tools/morphe-cli.jar 2>/dev/null || echo "Morphe CLI download may have failed"
+          
+          echo "Downloading Morphe Patches..."
+          curl -L "https://github.com/MorpheApp/morphe-patches/releases/latest/download/morphe-patches.mpp" \
+            -o tools/morphe-patches.mpp 2>/dev/null || echo "Morphe Patches download may have failed"
+      
+      - name: Download ReVanced Tools (for Anddea)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p tools
+          
+          echo "Downloading ReVanced CLI (inotia00 fork)..."
+          curl -L "https://github.com/inotia00/revanced-cli/releases/latest/download/revanced-cli-all.jar" \
+            -o tools/revanced-cli.jar 2>/dev/null || echo "ReVanced CLI download may have failed"
+          
+          echo "Downloading Anddea Patches..."
+          curl -L "https://github.com/anddea/revanced-patches/releases/latest/download/patches.jar" \
+            -o tools/anddea-patches.jar 2>/dev/null || echo "Anddea Patches download may have failed"
+          
+          echo "Downloading ReVanced Integrations..."
+          curl -L "https://github.com/revanced/revanced-integrations/releases/latest/download/app-release-unsigned.apk" \
+            -o tools/integrations.apk 2>/dev/null || echo "ReVanced Integrations download may have failed"
+      
+      - name: Cache Tools
+        uses: actions/cache@v4
+        id: cache-tools
+        with:
+          path: tools/
+          key: build-tools-${{ hashFiles('my-patch-config.json', 'arch-config.json') }}
+      
+      - name: Generate Cache Key
+        id: cache-key
+        run: echo "cache-key=${{ steps.cache-tools.outputs.cache-key || 'no-cache' }}" >> $GITHUB_OUTPUT
+
+  prepare-matrix:
+    name: Prepare Build Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.read-matrix.outputs.matrix }}
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Read Patch Config
+        id: read-matrix
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = './my-patch-config.json';
+            const matrix = JSON.parse(fs.readFileSync(path, 'utf8')).patch_list;
+            core.setOutput("matrix", JSON.stringify(matrix));
+
+  build-apps:
+    name: Build ${{ matrix.app_name }} with ${{ matrix.source }}
+    needs: [download-tools, prepare-matrix]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Restore Cached Tools
+        uses: actions/cache@v4
+        with:
+          path: tools/
+          key: build-tools-${{ hashFiles('my-patch-config.json', 'arch-config.json') }}
+      
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install requests beautifulsoup4
+      
+      - name: Build APK
+        env:
+          APP_NAME: ${{ matrix.app_name }}
+          SOURCE: ${{ matrix.source }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Building ${{ matrix.app_name }} with ${{ matrix.source }}..."
+          sleep $((RANDOM % 10))
+          python -m src
+      
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-${{ matrix.app_name }}-${{ matrix.source }}
+          path: "*.apk"
+          if-no-files-found: warn
+
+  create-release:
+    name: Create Integrated Release
+    needs: build-apps
+    runs-on: ubuntu-latest
+    if: always()
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      
+      - name: Download All APK Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./all-apks
+          if-no-files-found: warn
+      
+      - name: Check if Any APKs Were Built
+        id: check-apks
+        run: |
+          apk_count=$(find ./all-apks -name "*.apk" 2>/dev/null | wc -l)
+          echo "Found $apk_count APK(s)"
+          
+          if [ $apk_count -eq 0 ]; then
+            echo "No APKs were built successfully"
+            echo "skip_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "$apk_count APK(s) ready for release"
+            echo "skip_release=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Collect All APKs
+        if: steps.check-apks.outputs.skip_release == 'false'
+        run: |
+          mkdir -p ./release-apks
+          echo "Collecting APKs..."
+          find ./all-apks -name "*.apk" -exec cp {} ./release-apks/ \;
+          echo "APKs ready for release:"
+          ls -la ./release-apks/
+          final_count=$(ls -1 ./release-apks/*.apk 2>/dev/null | wc -l || echo "0")
+          echo "Total APKs: $final_count"
+      
+      - name: Generate Release Tag (JST)
+        if: steps.check-apks.outputs.skip_release == 'false'
+        id: tag
+        run: |
+          jst_time=$(TZ=Asia/Tokyo date +'%Y-%m-%d_%H-%M-JST')
+          echo "release_tag=$jst_time" >> $GITHUB_OUTPUT
+          echo "Release tag: $jst_time"
+      
+      - name: Generate Release Notes
+        if: steps.check-apks.outputs.skip_release == 'false'
+        id: notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          morphe_tag="${{ github.event.inputs.morphe_tag }}"
+          anddea_tag="${{ github.event.inputs.anddea_tag }}"
+          morphe_updated="${{ github.event.inputs.morphe_updated }}"
+          anddea_updated="${{ github.event.inputs.anddea_updated }}"
+          
+          if [ -z "$morphe_tag" ]; then
+            morphe_tag=$(gh api repos/MorpheApp/morphe-patches/releases/latest --jq '.tag_name' 2>/dev/null || echo "latest")
+          fi
+          if [ -z "$anddea_tag" ]; then
+            anddea_tag=$(gh api repos/anddea/revanced-patches/releases/latest --jq '.tag_name' 2>/dev/null || echo "latest")
+          fi
+          
+          jst_time=$(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M JST')
+          
+          {
+            echo "## Morphe AutoBuilds - $jst_time"
+            echo ""
+            echo "## APK List"
+            echo ""
+            echo "| Filename | App | Patch Source | Patch Version |"
+            echo "| --- | --- | --- | --- |"
+            
+            for apk in ./release-apks/*.apk; do
+              filename=$(basename "$apk")
+              
+              if [[ "$filename" == *"youtube-music"* ]]; then
+                app="YouTube Music"
+              elif [[ "$filename" == *"youtube"* ]]; then
+                app="YouTube"
+              else
+                app="Unknown"
+              fi
+              
+              if [[ "$filename" == *"revanced-anddea"* ]]; then
+                source="Anddea"
+                version="$anddea_tag"
+              else
+                source="Official Morphe"
+                version="$morphe_tag"
+              fi
+              
+              echo "| $filename | $app | $source | $version |"
+            done
+            
+            echo ""
+            echo "## Update Information"
+            echo ""
+            echo "| Patch Source | Version | Status |"
+            echo "| --- | --- | --- |"
+            
+            if [ "$morphe_updated" = "true" ]; then
+              echo "| Official Morphe | $morphe_tag | Updated |"
+            else
+              echo "| Official Morphe | $morphe_tag | No changes |"
+            fi
+            
+            if [ "$anddea_updated" = "true" ]; then
+              echo "| Anddea | $anddea_tag | Updated |"
+            else
+              echo "| Anddea | $anddea_tag | No changes |"
+            fi
+            
+            echo ""
+            echo "## Patch Sources"
+            echo ""
+            echo "- **Official Morphe**: https://github.com/MorpheApp/morphe-patches/releases/tag/$morphe_tag"
+            echo "- **Anddea**: https://github.com/anddea/revanced-patches/releases/tag/$anddea_tag"
+            echo ""
+            echo "## Notes"
+            echo ""
+            echo "- All APKs are arm64-v8a architecture only"
+            echo "- Uninstall existing app before installation"
+            echo "- These APKs are auto-built. Use at your own risk."
+          } > release_notes.md
+          
+          echo "Release notes generated"
+      
+      - name: Generate README.md
+        if: steps.check-apks.outputs.skip_release == 'false'
+        run: |
+          python scripts/generate_readme.py > README_RELEASE.md
+          echo "README.md generated"
+      
+      - name: Create Release
+        if: steps.check-apks.outputs.skip_release == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          release_tag="${{ steps.tag.outputs.release_tag }}"
+          
+          echo "Creating release: $release_tag"
+          
+          gh release create "$release_tag" \
+            --title "Morphe AutoBuilds $release_tag" \
+            --notes-file release_notes.md \
+            ./release-apks/*.apk \
+            README_RELEASE.md
+          
+          echo "Release created successfully!"
+          echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/$release_tag"
+      
+      - name: Display Release Summary
+        if: steps.check-apks.outputs.skip_release == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          release_tag="${{ steps.tag.outputs.release_tag }}"
+          
+          echo "Release Summary:"
+          echo "  Tag: $release_tag"
+          echo "  APKs:"
+          ls -1 ./release-apks/*.apk | sed 's/^/    - /'
+          echo ""
+          echo "Download: https://github.com/${{ github.repository }}/releases/tag/$release_tag"
