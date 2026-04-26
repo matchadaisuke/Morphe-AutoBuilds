@@ -130,7 +130,7 @@ jobs:
                 '.[] | select(.name | test($pat; "i")) | .browser_download_url' \
                 2>/dev/null | head -1)
               if [ -n "$url" ]; then
-                reuse_map=$(echo "$reuse_map" | jq --arg k "$src" --arg v "$url" '.[$k]=$v')
+                reuse_map=$(echo "$reuse_map" | jq -c --arg k "$src" --arg v "$url" '.[$k]=$v')
                 echo "  Reuse $src: $url"
               fi
             fi
