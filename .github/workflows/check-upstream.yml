@@ -153,7 +153,8 @@ jobs:
           maybe_reuse_each yuzu    "$UPD_YUZU"     "yuucho"
           maybe_reuse dropped      "$UPD_DROPPED"  "-dropped"
 
-          echo "reuse_map=$reuse_map" >> $GITHUB_OUTPUT
+          # base64エンコードしてGITHUB_OUTPUTに書き出す（JSON内の特殊文字でActions parserが壊れるのを防ぐ）
+          echo "reuse_map=$(echo "$reuse_map" | base64 -w0)" >> $GITHUB_OUTPUT
 
       - name: Trigger Build if Updates Found
         if: steps.compare.outputs.any_updated == 'true' || steps.apkver.outputs.any_apk_updated == 'true'

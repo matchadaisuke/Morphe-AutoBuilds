@@ -256,9 +256,16 @@ jobs:
         if: steps.check-apks.outputs.skip_release == 'false'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REUSE_JSON: ${{ github.event.inputs.reuse_apks_json }}
         run: |
           mkdir -p ./release-apks
+          # reuse_apks_json は base64 エンコード済みの場合と生JSON両方に対応
+          raw_input="${{ github.event.inputs.reuse_apks_json }}"
+          if [ -n "$raw_input" ] && [ "$raw_input" != "{}" ]; then
+            decoded=$(echo "$raw_input" | base64 -d 2>/dev/null || echo "$raw_input")
+            export REUSE_JSON="$decoded"
+          else
+            export REUSE_JSON="{}"
+          fi
           python3 scripts/download_reused_apks.py
 
       - name: Generate Release Notes
