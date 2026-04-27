@@ -2,14 +2,14 @@ import json, os, sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 
 upd = {
-    'morphe':          os.environ.get('UPD_MORPHE',  'true'),
-    'revanced-anddea': os.environ.get('UPD_ANDDEA',  'true'),
-    'piko':            os.environ.get('UPD_PIKO',    'true'),
-    'hoo':             os.environ.get('UPD_HOO',     'true'),
-    'rookie':          os.environ.get('UPD_ROOKIE',  'true'),
-    'tosox':           os.environ.get('UPD_TOSOX',   'true'),
-    'yuzu':            os.environ.get('UPD_YUZU',    'true'),
-    'dropped':         os.environ.get('UPD_DROPPED', 'true'),
+    'morphe':          os.environ.get('UPD_MORPHE',  'false'),
+    'revanced-anddea': os.environ.get('UPD_ANDDEA',  'false'),
+    'piko':            os.environ.get('UPD_PIKO',    'false'),
+    'hoo':             os.environ.get('UPD_HOO',     'false'),
+    'rookie':          os.environ.get('UPD_ROOKIE',  'false'),
+    'tosox':           os.environ.get('UPD_TOSOX',   'false'),
+    'yuzu':            os.environ.get('UPD_YUZU',    'false'),
+    'dropped':         os.environ.get('UPD_DROPPED', 'false'),
 }
 all_items = json.load(open('./my-patch-config.json'))['patch_list']
 all_true = all(v == 'true' for v in upd.values())

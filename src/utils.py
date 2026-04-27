@@ -285,7 +285,30 @@ def extract_filename(response, fallback_url=None) -> str:
     path = urlparse(fallback_url or response.url).path
     return unquote(Path(path).name)
 
-def detect_github_release(user: str, repo: str, tag: str) -> dict:
+def detect_github_release(user: str, repo: str, tag: str, retries: int = 3, retry_delay: int = 10) -> dict:
+    import time
+
+    last_err = None
+    for attempt in range(1, retries + 1):
+        try:
+            return _detect_github_release_once(user, repo, tag)
+        except Exception as e:
+            last_err = e
+            if attempt < retries:
+                logging.warning(
+                    f"⚠️  GitHub release fetch failed for {user}/{repo} "
+                    f"(attempt {attempt}/{retries}): {e} — retrying in {retry_delay}s..."
+                )
+                time.sleep(retry_delay)
+            else:
+                logging.error(
+                    f"❌ GitHub release fetch failed for {user}/{repo} "
+                    f"after {retries} attempts: {e}"
+                )
+    raise last_err
+
+
+def _detect_github_release_once(user: str, repo: str, tag: str) -> dict:
     repo_obj = gh.get_repo(f"{user}/{repo}")
 
     if tag in ["latest", "latest-tag"]:

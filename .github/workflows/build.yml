@@ -41,35 +41,35 @@ on:
       morphe_updated:
         description: 'Whether Morphe (Official) was updated'
         required: false
-        default: 'true'
+        default: 'false'
       anddea_updated:
         description: 'Whether Anddea was updated'
         required: false
-        default: 'true'
+        default: 'false'
       piko_updated:
         description: 'Whether Piko was updated'
         required: false
-        default: 'true'
+        default: 'false'
       hoo_updated:
         description: 'Whether Hoo-dles was updated'
         required: false
-        default: 'true'
+        default: 'false'
       rookie_updated:
         description: 'Whether RookieEnough was updated'
         required: false
-        default: 'true'
+        default: 'false'
       tosox_updated:
         description: 'Whether Tosox was updated'
         required: false
-        default: 'true'
+        default: 'false'
       yuzu_updated:
         description: 'Whether YuzuMikan404 was updated'
         required: false
-        default: 'true'
+        default: 'false'
       dropped_updated:
         description: 'Whether Dropped-Patches was updated'
         required: false
-        default: 'true'
+        default: 'false'
       reuse_apks_json:
         description: 'JSON map of source -> APK asset URL to reuse (no rebuild needed)'
         required: false
@@ -115,12 +115,19 @@ jobs:
           curl -L "https://github.com/anddea/revanced-patches/releases/latest/download/patches.jar" \
             -o tools/anddea-patches.jar 2>/dev/null || echo "Anddea Patches download may have failed"
       
+      - name: Download All Source Tools
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pip install -r requirements.txt -q
+          python3 scripts/download_all_tools.py
+
       - name: Cache Tools
         uses: actions/cache@v4
         id: cache-tools
         with:
           path: tools/
-          key: build-tools-${{ hashFiles('my-patch-config.json', 'arch-config.json') }}
+          key: build-tools-${{ hashFiles('my-patch-config.json', 'arch-config.json', 'sources/**') }}
       
       - name: Generate Cache Key
         id: cache-key
@@ -168,7 +175,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: tools/
-          key: build-tools-${{ hashFiles('my-patch-config.json', 'arch-config.json') }}
+          key: build-tools-${{ hashFiles('my-patch-config.json', 'arch-config.json', 'sources/**') }}
       
       - name: Install Python
         uses: actions/setup-python@v5
@@ -190,11 +197,12 @@ jobs:
           python3 -m src
       
       - name: Upload APK Artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: apk-${{ matrix.app_name }}-${{ matrix.source }}
           path: "*.apk"
-          if-no-files-found: error
+          if-no-files-found: warn
 
   create-release:
     name: Create Integrated Release
@@ -217,7 +225,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ./all-apks
-          if-no-files-found: error
+          if-no-files-found: warn
       
       - name: Check if Any APKs Were Built
         id: check-apks

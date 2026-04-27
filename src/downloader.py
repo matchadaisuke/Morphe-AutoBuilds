@@ -59,6 +59,25 @@ def download_required(source: str) -> tuple[list[Path], str]:
     name = repos_info[0]["name"]
     downloaded_files = []
 
+    # tools/<name>/ にキャッシュ済みファイルがあればAPIを叩かずそちらを使う
+    tools_dir = Path("tools") / name
+    if tools_dir.exists():
+        cached = [f for f in tools_dir.iterdir()
+                  if f.is_file() and not f.name.endswith(".asc") and f.stat().st_size > 0]
+        if cached:
+            logging.info(f"📦 Using pre-downloaded tools from {tools_dir} ({len(cached)} files)")
+            for f in cached:
+                dest = Path(f.name)
+                if not dest.exists():
+                    import shutil
+                    shutil.copy2(f, dest)
+                downloaded_files.append(dest)
+            return downloaded_files, name
+        else:
+            logging.warning(f"⚠️  tools/{name}/ exists but is empty — falling back to GitHub API")
+
+    # キャッシュなし → 従来通りGitHub APIから取得
+    logging.info(f"⬇️  Downloading tools for {name} from GitHub API")
     for repo_info in repos_info[1:]:
         user = repo_info['user']
         repo = repo_info['repo']
