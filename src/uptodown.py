@@ -32,7 +32,8 @@ def get_latest_version(app_name: str, config: dict) -> str:
             logging.debug(f"Failed for {url}: {str(e)[:50]}...")
             continue
     
-    raise Exception(f"Could not find Uptodown page for {app_name}")
+    logging.error(f"Could not find Uptodown page for {app_name}")
+    return None
 
 def get_download_link(version: str, app_name: str, config: dict) -> str:
     # Generate all possible Uptodown names

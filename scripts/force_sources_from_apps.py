@@ -1,4 +1,5 @@
-import json, os, sys
+import json, os, sys, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 
 apps = json.loads(os.environ.get("APK_UPDATED_APPS", "[]"))
 with open("my-patch-config.json") as f:

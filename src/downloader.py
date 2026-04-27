@@ -173,7 +173,17 @@ def download_platform(app_name: str, platform: str, cli: str, patches: str, arch
                 logging.error(f"❌ {platform}: direct_url download failed for {app_name}: {type(e).__name__}: {e}")
                 return None, None
 
-        version = config.get("version") or utils.get_supported_version(config['package'], cli, patches)
+        version = config.get("version") or None
+        if not version:
+            if platform == "github":
+                # GitHub releases carry the version in the tag — skip CLI invocation
+                try:
+                    version = globals()["github"].get_latest_version(app_name, config)
+                except Exception as e:
+                    logging.error(f"❌ github: get_latest_version failed for {app_name}: {e}")
+                    return None, None
+            else:
+                version = utils.get_supported_version(config['package'], cli, patches)
         platform_module = globals()[platform]
 
         if not version:

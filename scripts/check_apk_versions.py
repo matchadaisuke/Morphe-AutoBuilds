@@ -1,4 +1,5 @@
 import json, os, sys, logging, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 logging.basicConfig(level=logging.WARNING)
 
 last = {}
@@ -18,7 +19,7 @@ for item in patch_list:
 
 from src import apkmirror, apkpure, uptodown, aptoide, github as github_mod
 
-platform_order = ["github", "apkmirror", "apkpure", "uptodown", "aptoide"]
+platform_order = ["apkmirror", "apkpure", "uptodown", "aptoide", "github"]
 
 any_apk_updated = False
 apk_updated_apps = []
@@ -44,8 +45,7 @@ for app in apps:
                 "uptodown": uptodown,
                 "aptoide": aptoide,
             }
-            mod = mod_map[platform]
-            ver = mod.get_latest_version(app, config)
+            ver = mod_map[platform].get_latest_version(app, config)
             if ver:
                 cur = str(ver)
                 break

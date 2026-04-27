@@ -149,26 +149,7 @@ jobs:
           UPD_DROPPED:  ${{ github.event.inputs.dropped_updated }}
         run: |
           # env: + run: is valid; env: + uses: is not (Actions parser error).
-          python3 - <<'PYEOF'
-          import json, os
-          upd = {
-            'morphe':          os.environ.get('UPD_MORPHE',  'true'),
-            'revanced-anddea': os.environ.get('UPD_ANDDEA',  'true'),
-            'piko':            os.environ.get('UPD_PIKO',    'true'),
-            'hoo':             os.environ.get('UPD_HOO',     'true'),
-            'rookie':          os.environ.get('UPD_ROOKIE',  'true'),
-            'tosox':           os.environ.get('UPD_TOSOX',   'true'),
-            'yuzu':            os.environ.get('UPD_YUZU',    'true'),
-            'dropped':         os.environ.get('UPD_DROPPED', 'true'),
-          }
-          all_items = json.load(open('./my-patch-config.json'))['patch_list']
-          all_true = all(v == 'true' for v in upd.values())
-          matrix = all_items if all_true else [i for i in all_items if upd.get(i['source']) == 'true']
-          if not matrix:
-            print('WARNING: No sources were updated – matrix is empty.')
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-            f.write(f"matrix={json.dumps(matrix)}\n")
-          PYEOF
+          python3 scripts/prepare_matrix.py
 
   build-apps:
     name: Build ${{ matrix.app_name }} with ${{ matrix.source }}
@@ -197,7 +178,6 @@ jobs:
       - name: Install Dependencies
         run: |
           pip install -r requirements.txt
-          pip install requests beautifulsoup4
       
       - name: Build APK
         env:
@@ -207,7 +187,7 @@ jobs:
         run: |
           echo "Building ${{ matrix.app_name }} with ${{ matrix.source }}..."
           sleep $((RANDOM % 10))
-          python -m src
+          python3 -m src
       
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
@@ -279,19 +259,7 @@ jobs:
           REUSE_JSON: ${{ github.event.inputs.reuse_apks_json }}
         run: |
           mkdir -p ./release-apks
-          if [ -z "$REUSE_JSON" ] || [ "$REUSE_JSON" = "{}" ]; then
-            echo "No APKs to reuse."
-            exit 0
-          fi
-          echo "$REUSE_JSON" | python3 -c "
-          import json, sys, subprocess, os
-          data = json.load(sys.stdin)
-          for source, url in data.items():
-              print(f'Downloading reused APK for {source}: {url}')
-              fname = url.split('/')[-1]
-              subprocess.run(['curl', '-sL', '-H', f'Authorization: token {os.environ[\"GITHUB_TOKEN\"]}',
-                              url, '-o', f'./release-apks/{fname}'], check=False)
-          "
+          python3 scripts/download_reused_apks.py
 
       - name: Generate Release Notes
         if: steps.check-apks.outputs.skip_release == 'false'
@@ -359,15 +327,15 @@ jobs:
           get_patch_info() {
             local f="$1"
             case "$f" in
-              *-morphe-v*|*-morphe-patches-*)  echo "Official Morphe|$morphe_tag" ;;
-              *-revanced-anddea-*)              echo "Anddea|$anddea_tag" ;;
-              *-piko-patches-*|*-piko-v*)       echo "Piko (crimera)|$piko_tag" ;;
-              *-morphe-patches-hoo-*|*-hoo-*)   echo "Hoo-dles|$hoo_tag" ;;
-              *-rookie-*|*De-ReVanced-*)        echo "RookieEnough|$rookie_tag" ;;
-              *-yuzu-*)                         echo "YuzuMikan404|$yuzu_tag" ;;
-              *-tosox-*|*-revanced-patches-*)   echo "Tosox|$tosox_tag" ;;
-              *-dropped-*)                      echo "Dropped-Patches|$dropped_tag" ;;
-              *)                                echo "Unknown|unknown" ;;
+              *-revanced-anddea-*)   echo "Anddea|$anddea_tag" ;;
+              *-piko-patches-*|*-piko-v*)  echo "Piko (crimera)|$piko_tag" ;;
+              *-hoo-*)              echo "Hoo-dles|$hoo_tag" ;;
+              *-rookie-*)           echo "RookieEnough|$rookie_tag" ;;
+              *-yuzu-*)             echo "YuzuMikan404|$yuzu_tag" ;;
+              *-tosox-*)             echo "Tosox|$tosox_tag" ;;
+              *-dropped-*)          echo "Dropped-Patches|$dropped_tag" ;;
+              *-morphe-*)           echo "Official Morphe|$morphe_tag" ;;
+              *)                    echo "Unknown|unknown" ;;
             esac
           }
 
@@ -383,10 +351,10 @@ jobs:
               [ -f "$apk" ] || continue
               filename=$(basename "$apk")
               app=$(get_app_name "$filename")
-              # Extract the LAST -vX.Y.Z segment before .apk — this is the APK version
-              # (not patch tag). Works for plain versions and rc/date suffixes like v26.5.1+rc1-2026.04.08
-              apk_version=$(echo "$filename" | grep -oP '(?<=-v)[^\-][^\s]*(?=\.apk$)' | tail -1)
-              # 'latest' is not a real version — show N/A instead
+              # Extract everything after the last -v before .apk (greedy match on the prefix)
+              apk_version=$(echo "$filename" | sed 's/.*-v\(.*\)\.apk$/\1/')
+              # If unchanged (no -v found) or 'latest', show N/A
+              [ "$apk_version" = "$filename" ] && apk_version=""
               [ "$apk_version" = "latest" ] && apk_version=""
               patch_info=$(get_patch_info "$filename")
               source_label="${patch_info%%|*}"

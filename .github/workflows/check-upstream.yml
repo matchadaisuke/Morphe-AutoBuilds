@@ -32,7 +32,7 @@ jobs:
           hoo_tag=$(fetch_tag     "hoo-dles/morphe-patches")
           rookie_tag=$(fetch_tag  "RookieEnough/De-ReVanced")
           tosox_tag=$(fetch_tag   "Tosox/revanced-patches")
-          yuzu_tag=$(fetch_tag    "YuzuMikan404/Yuucho-Tuucho-and-Ninsho")
+          yuzu_tag=$(fetch_tag    "YuzuMikan404/linegms-fork-second-")
           dropped_tag=$(fetch_tag "indrastorms/Dropped-Patches")
 
           for var in morphe anddea piko hoo rookie tosox yuzu dropped; do
@@ -93,7 +93,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          pip install requests beautifulsoup4 PyGithub --quiet
+          pip install requests beautifulsoup4 PyGithub curl-cffi --quiet
           python3 scripts/check_apk_versions.py
 
       - name: Collect Reusable APK URLs from Last Release
@@ -144,14 +144,14 @@ jobs:
             fi
           }
 
-          maybe_reuse morphe    "$UPD_MORPHE"   "-morphe-v"
-          maybe_reuse anddea    "$UPD_ANDDEA"   "revanced-anddea"
-          maybe_reuse piko      "$UPD_PIKO"     "-piko"
-          maybe_reuse hoo       "$UPD_HOO"      "-hoo"
-          maybe_reuse rookie    "$UPD_ROOKIE"   "-rookie"
-          maybe_reuse tosox     "$UPD_TOSOX"    "-tosox"
-          maybe_reuse_each yuzu "$UPD_YUZU"     "yuucho"
-          maybe_reuse dropped   "$UPD_DROPPED"  "-dropped"
+          maybe_reuse_each morphe  "$UPD_MORPHE"   "-morphe-v"
+          maybe_reuse_each anddea  "$UPD_ANDDEA"   "revanced-anddea"
+          maybe_reuse piko         "$UPD_PIKO"     "-piko"
+          maybe_reuse_each hoo     "$UPD_HOO"      "-hoo-"
+          maybe_reuse_each rookie  "$UPD_ROOKIE"   "-rookie-"
+          maybe_reuse tosox        "$UPD_TOSOX"    "-tosox"
+          maybe_reuse_each yuzu    "$UPD_YUZU"     "yuucho"
+          maybe_reuse dropped      "$UPD_DROPPED"  "-dropped"
 
           echo "reuse_map=$reuse_map" >> $GITHUB_OUTPUT
 
@@ -249,7 +249,7 @@ jobs:
 
           echo "$current" > last-tags.json
 
-          pip install requests beautifulsoup4 PyGithub --quiet 2>/dev/null
+          pip install requests beautifulsoup4 PyGithub curl-cffi --quiet 2>/dev/null
           python3 scripts/save_apk_versions.py
 
           git config user.name "github-actions[bot]"

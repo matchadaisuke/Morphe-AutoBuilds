@@ -1,4 +1,5 @@
 import json, os, sys, logging, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 logging.basicConfig(level=logging.WARNING)
 
 with open("last-tags.json") as f:
@@ -16,7 +17,7 @@ for item in patch_list:
 
 from src import apkmirror, apkpure, uptodown, aptoide, github as github_mod
 
-platform_order = ["github", "apkmirror", "apkpure", "uptodown", "aptoide"]
+platform_order = ["apkmirror", "apkpure", "uptodown", "aptoide", "github"]
 mod_map = {"github": github_mod, "apkmirror": apkmirror, "apkpure": apkpure,
            "uptodown": uptodown, "aptoide": aptoide}
 
