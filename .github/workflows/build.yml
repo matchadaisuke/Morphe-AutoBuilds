@@ -197,7 +197,7 @@ jobs:
           python3 -m src
       
       - name: Upload APK Artifact
-        if: always()
+        if: always() && !cancelled()
         uses: actions/upload-artifact@v4
         with:
           name: apk-${{ matrix.app_name }}-${{ matrix.source }}
@@ -206,9 +206,9 @@ jobs:
 
   create-release:
     name: Create Integrated Release
-    needs: build-apps
+    needs: [download-tools, prepare-matrix, build-apps]
     runs-on: ubuntu-latest
-    if: always()
+    if: always() && !cancelled()
     permissions:
       contents: write
     
@@ -226,42 +226,8 @@ jobs:
         with:
           path: ./all-apks
           if-no-files-found: warn
-      
-      - name: Check if Any APKs Were Built
-        id: check-apks
-        run: |
-          apk_count=$(find ./all-apks -name "*.apk" 2>/dev/null | wc -l)
-          echo "Found $apk_count APK(s)"
-          
-          if [ $apk_count -eq 0 ]; then
-            echo "No APKs were built successfully"
-            echo "skip_release=true" >> $GITHUB_OUTPUT
-          else
-            echo "$apk_count APK(s) ready for release"
-            echo "skip_release=false" >> $GITHUB_OUTPUT
-          fi
-      
-      - name: Collect All APKs
-        if: steps.check-apks.outputs.skip_release == 'false'
-        run: |
-          mkdir -p ./release-apks
-          echo "Collecting APKs..."
-          find ./all-apks -name "*.apk" -exec cp {} ./release-apks/ \;
-          echo "APKs ready for release:"
-          ls -la ./release-apks/
-          final_count=$(ls -1 ./release-apks/*.apk 2>/dev/null | wc -l || echo "0")
-          echo "Total APKs: $final_count"
-      
-      - name: Generate Release Tag (JST)
-        if: steps.check-apks.outputs.skip_release == 'false'
-        id: tag
-        run: |
-          jst_time=$(TZ=Asia/Tokyo date +'%Y-%m-%d_%H-%M-JST')
-          echo "release_tag=$jst_time" >> $GITHUB_OUTPUT
-          echo "Release tag: $jst_time"
-      
+
       - name: Download Reused APKs (sources not rebuilt this run)
-        if: steps.check-apks.outputs.skip_release == 'false'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -275,6 +241,34 @@ jobs:
             export REUSE_JSON="{}"
           fi
           python3 scripts/download_reused_apks.py
+
+      - name: Collect All APKs
+        run: |
+          mkdir -p ./release-apks
+          echo "Collecting built APKs..."
+          find ./all-apks -name "*.apk" -exec cp {} ./release-apks/ \;
+          echo "APKs in release-apks (built + reused):"
+          ls -la ./release-apks/ 2>/dev/null || echo "(none)"
+
+      - name: Check if Any APKs Were Built
+        id: check-apks
+        run: |
+          total=$(find ./release-apks -name "*.apk" 2>/dev/null | wc -l)
+          echo "Total APKs (built + reused): $total"
+          if [ "$total" -eq 0 ]; then
+            echo "No APKs available -- skipping release"
+            echo "skip_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip_release=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate Release Tag (JST)
+        if: steps.check-apks.outputs.skip_release == 'false'
+        id: tag
+        run: |
+          jst_time=$(TZ=Asia/Tokyo date +'%Y-%m-%d_%H-%M-JST')
+          echo "release_tag=$jst_time" >> $GITHUB_OUTPUT
+          echo "Release tag: $jst_time"
 
       - name: Generate Release Notes
         if: steps.check-apks.outputs.skip_release == 'false'

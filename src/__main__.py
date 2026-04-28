@@ -158,9 +158,9 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
             for line in patches_file:
                 line = line.strip()
                 if line.startswith('-'):
-                    exclude_patches.extend(["-d", line[1:].strip()])
+                    exclude_patches.extend(["-e", line[1:].strip()])
                 elif line.startswith('+'):
-                    include_patches.extend(["-e", line[1:].strip()])
+                    include_patches.extend(["-i", line[1:].strip()])
 
     # Repair corrupted APK
     logging.info("Checking APK for corruption...")
