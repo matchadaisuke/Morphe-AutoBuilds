@@ -246,7 +246,7 @@ jobs:
         run: |
           mkdir -p ./release-apks
           echo "Collecting built APKs..."
-          find ./all-apks -name "*.apk" -exec cp {} ./release-apks/ \;
+          [ -d ./all-apks ] && find ./all-apks -name "*.apk" -exec cp {} ./release-apks/ \; || true
           echo "APKs in release-apks (built + reused):"
           ls -la ./release-apks/ 2>/dev/null || echo "(none)"
 

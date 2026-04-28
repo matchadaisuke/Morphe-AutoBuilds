@@ -9,9 +9,9 @@
   "dropped": "v1.5.1",
   "apk_yuucho-tsucho": "1.0",
   "apk_yuucho-ninsho": "17.0.0",
-  "apk_youtube": "21.16.253",
+  "apk_youtube": "21.16.254",
   "apk_youtube-music": "9.16.20",
-  "apk_instagram": "427.0.0.47.73",
+  "apk_instagram": "427.0.0.44.73",
   "apk_adguard": "4.14.51",
   "apk_prime-video": "3.0.417",
   "apk_duolingo": "6.76.3",
@@ -28,5 +28,5 @@
   "apk_crunchyroll": "3.99.3",
   "apk_tasker": "6.6.20",
   "apk_photomath": "8.47.1",
-  "apk_pixiv": "6.180.1"
+  "apk_pixiv": "6.180.0"
 }
