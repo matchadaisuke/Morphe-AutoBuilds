@@ -63,7 +63,7 @@ def get_download_link(version: str, app_name: str, config: Dict) -> str:
         return items[0]['file']['path']
 
     # Find vercode for specific version
-    url_versions = f"{BASE_URL}listAppVersions?package_name={package}&limit=50{q}"
+    url_versions = f"{BASE_URL}listAppVersions?package_name={package}&limit=100{q}"
     res_v = session.get(url_versions)
     res_v.raise_for_status()
     versions_list = res_v.json().get('datalist', {}).get('list', [])
@@ -74,8 +74,7 @@ def get_download_link(version: str, app_name: str, config: Dict) -> str:
             break
     if not vercode:
         # Version not found in listAppVersions — fall back to search API
-        # (some apps report a version in search results but don't expose it
-        # in the versions list; in that case grab the download path directly)
+        # Only use the result if it matches the requested version exactly.
         logging.warning(
             f"aptoide: version '{version}' not in listAppVersions for '{package}', "
             f"falling back to search API"
@@ -86,6 +85,12 @@ def get_download_link(version: str, app_name: str, config: Dict) -> str:
         items = res_s.json().get('datalist', {}).get('list', [])
         if not items:
             raise ValueError(f"aptoide: version '{version}' not found for package '{package}'")
+        found_vername = items[0]['file'].get('vername', '')
+        if found_vername != version:
+            raise ValueError(
+                f"aptoide: version '{version}' not available for package '{package}' "
+                f"(search returned '{found_vername}' instead)"
+            )
         path = items[0]['file'].get('path')
         if not path:
             raise ValueError(f"aptoide: no download path for package '{package}'")

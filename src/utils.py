@@ -186,19 +186,20 @@ def get_supported_version(package_name: str, cli: str, patches: str) -> Optional
             '-f', package_name,
         ]
     elif is_revanced_v6_or_newer:
+        # ReVanced CLI v5+: list-versions <bundle> [-f <package>]
         cmd = [
             'java', '-jar', cli,
             'list-versions',
-            '-p', patches, '-b',
-            '-f', package_name
+            patches,
+            '-f', package_name,
         ]
     else:
-        # ReVanced CLI: pass patches as positional arg
+        # ReVanced CLI v4: list-versions [-f <package>] <bundle>
         cmd = [
             'java', '-jar', cli,
             'list-versions',
             '-f', package_name,
-            patches
+            patches,
         ]
 
     output = run_process(cmd, capture=True, silent=True, check=False)

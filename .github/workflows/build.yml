@@ -118,6 +118,14 @@ jobs:
       - name: Download All Source Tools
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPD_MORPHE:   ${{ github.event.inputs.morphe_updated }}
+          UPD_ANDDEA:   ${{ github.event.inputs.anddea_updated }}
+          UPD_PIKO:     ${{ github.event.inputs.piko_updated }}
+          UPD_HOO:      ${{ github.event.inputs.hoo_updated }}
+          UPD_ROOKIE:   ${{ github.event.inputs.rookie_updated }}
+          UPD_TOSOX:    ${{ github.event.inputs.tosox_updated }}
+          UPD_YUZU:     ${{ github.event.inputs.yuzu_updated }}
+          UPD_DROPPED:  ${{ github.event.inputs.dropped_updated }}
         run: |
           pip install -r requirements.txt -q
           python3 scripts/download_all_tools.py
@@ -197,12 +205,11 @@ jobs:
           python3 -m src
       
       - name: Upload APK Artifact
-        if: always() && !cancelled()
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: apk-${{ matrix.app_name }}-${{ matrix.source }}
           path: "*.apk"
-          if-no-files-found: warn
 
   create-release:
     name: Create Integrated Release
@@ -225,7 +232,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ./all-apks
-          if-no-files-found: warn
 
       - name: Download Reused APKs (sources not rebuilt this run)
         env:
