@@ -397,7 +397,52 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
     elif cli_ver in ("v4", "v5plus"):
         _patch_revanced(cli, bundle, input_apk, output_apk, enables, disables)
     else:
+<<<<<<< HEAD
         _patch_legacy(cli, bundle, input_apk, output_apk, enables, disables)
+=======
+        logging.info("🔧 Using ReVanced patching system...")
+        cli_name = Path(cli).name.lower()
+        is_revanced_v6_or_newer = any(f'revanced-cli-{v}' in cli_name for v in ['6', '7', '8'])
+        is_revanced_v4 = 'revanced-cli-4' in cli_name or (not is_revanced_v6_or_newer and cli_name.endswith('-all.jar'))
+
+        if is_revanced_v6_or_newer:
+            utils.run_process([
+                "java", "-jar", str(cli),
+                "patch", "-p", str(patches), "-b",
+                "--out", str(output_apk), str(input_apk),
+                *exclude_patches, *include_patches
+            ], stream=True)
+        elif is_revanced_v4:
+            # ReVanced CLI v4: -b/--patch-bundle, -i/--include, -e/--exclude, --exclusive
+            # Log available patches for debugging
+            try:
+                patch_list = utils.run_process([
+                    "java", "-jar", str(cli),
+                    "list-patches", "-b", str(patches)
+                ], capture=True)
+                if patch_list:
+                    logging.info(f"Available patches in {patches.name}:\n{patch_list}")
+            except Exception as e:
+                logging.warning(f"Could not list patches: {e}")
+            logging.info(f"include_patches={include_patches}, exclude_patches={exclude_patches}")
+            exclusive_flag = ["--exclusive"] if include_patches else []
+            utils.run_process([
+                "java", "-jar", str(cli),
+                "patch",
+                "-b", str(patches),
+                "--out", str(output_apk),
+                *exclusive_flag,
+                *exclude_patches, *include_patches,
+                str(input_apk),
+            ], stream=True)
+        else:
+            utils.run_process([
+                "java", "-jar", str(cli),
+                "patch", "--patches", str(patches),
+                "--out", str(output_apk), str(input_apk),
+                *exclude_patches, *include_patches
+            ], stream=True)
+>>>>>>> 9a21e478db360742004550a13f07ad6d7a9453c6
 
     input_apk.unlink(missing_ok=True)
 
