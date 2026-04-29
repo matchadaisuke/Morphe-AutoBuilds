@@ -15,11 +15,11 @@ Morphe CLI  (.mpp patch bundle)
 
 ReVanced CLI v4.x  (revanced-cli-4.*.jar)
   list-patches <bundle>
-  patch -p <bundle> --out <out> [--exclusive] [-e "Name"] [-d "Name"] <input>
+  patch -b <bundle> --out <out> [--exclusive] [-e "Name"] [-d "Name"] <input>
 
 ReVanced CLI v5+   (revanced-cli-5.*.jar, revanced-cli-6.*.jar, …)
   list-patches <bundle>
-  patch -p <bundle> --out <out> [--exclusive] [-e "Name"] [-d "Name"] <input>
+  patch -b <bundle> --out <out> [--exclusive] [-e "Name"] [-d "Name"] <input>
 
 ReVanced CLI legacy / v3  (any other *-all.jar)
   patch --patches <bundle> --out <out> [-i "Name"] [-e "Name"] <input>
@@ -159,7 +159,7 @@ def _patch_revanced(
     Patch using ReVanced CLI v4 or v5+.
 
     Both generations share the same public interface from v4 onward:
-      patch -p <bundle> [--exclusive] [-e "Name"] [-d "Name"] --out <out> <input>
+      patch -b <bundle> [--exclusive] [-e "Name"] [-d "Name"] --out <out> <input>
     """
     _log_available_patches(cli, bundle)
     logging.info("enable_patches=%s  disable_patches=%s", enables, disables)
@@ -170,7 +170,7 @@ def _patch_revanced(
     utils.run_process([
         "java", "-jar", str(cli),
         "patch",
-        "-p", str(bundle),
+        "-b", str(bundle),
         "--out", str(output_apk),
         *exclusive,
         *disables,
