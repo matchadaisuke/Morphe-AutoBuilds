@@ -216,6 +216,17 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
             ], stream=True)
         elif is_revanced_v4:
             # ReVanced CLI v4: -b/--patch-bundle, -i/--include, -e/--exclude, --exclusive
+            # Log available patches for debugging
+            try:
+                patch_list = utils.run_process([
+                    "java", "-jar", str(cli),
+                    "list-patches", "-b", str(patches)
+                ], capture=True)
+                if patch_list:
+                    logging.info(f"Available patches in {patches.name}:\n{patch_list}")
+            except Exception as e:
+                logging.warning(f"Could not list patches: {e}")
+            logging.info(f"include_patches={include_patches}, exclude_patches={exclude_patches}")
             exclusive_flag = ["--exclusive"] if include_patches else []
             utils.run_process([
                 "java", "-jar", str(cli),
