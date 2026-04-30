@@ -190,12 +190,15 @@ def _patch_revanced(
     output_apk: Path,
     enables: list[str],
     disables: list[str],
+    cli_ver: str = "v5plus",
 ) -> None:
     """
     Patch using ReVanced CLI v4 or v5+.
 
-    v4.x: patch -b <bundle> [--exclusive] [-i "Name"] [-e "Name"] --out <out> <input>
-    v5+:  patch -b <bundle> [--exclusive] [-e "Name"] [-d "Name"] --out <out> <input>
+    v4.x: patch -b  <bundle> [--exclusive] [-i "Name"] [-e "Name"] --out <out> <input>
+          (-b = --bundle)
+    v5+:  patch -p  <bundle> [--exclusive] [-e "Name"] [-d "Name"] --out <out> <input>
+          (-p = --patches  ※ v5で -b から -p にリネームされた)
     """
     _log_available_patches(cli, bundle)
     logging.info("enable_patches=%s  disable_patches=%s", enables, disables)
@@ -203,10 +206,13 @@ def _patch_revanced(
     # --exclusive: apply *only* the explicitly enabled patches
     exclusive = ["--exclusive"] if enables else []
 
+    # v4 uses -b/--bundle; v5+ renamed it to -p/--patches
+    bundle_flag = "-b" if cli_ver == "v4" else "-p"
+
     utils.run_process([
         "java", "-jar", str(cli),
         "patch",
-        "-b", str(bundle),
+        bundle_flag, str(bundle),
         "--out", str(output_apk),
         *exclusive,
         *disables,
@@ -431,7 +437,7 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
     if is_morphe:
         _patch_morphe(cli, bundle, input_apk, output_apk, enables, disables)
     elif cli_ver in ("v4", "v5plus"):
-        _patch_revanced(cli, bundle, input_apk, output_apk, enables, disables)
+        _patch_revanced(cli, bundle, input_apk, output_apk, enables, disables, cli_ver)
     else:
         _patch_legacy(cli, bundle, input_apk, output_apk, enables, disables)
 
