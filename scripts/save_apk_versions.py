@@ -2,8 +2,15 @@ import json, os, sys, logging, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 logging.basicConfig(level=logging.WARNING)
 
-with open("last-tags.json") as f:
-    current = json.load(f)
+current = {}
+if os.path.exists("last-tags.json"):
+    try:
+        with open("last-tags.json") as f:
+            content = f.read().strip()
+        if content:
+            current = json.loads(content)
+    except (json.JSONDecodeError, ValueError) as e:
+        logging.warning("last-tags.json is empty or corrupt, starting fresh: %s", e)
 
 with open("my-patch-config.json") as f:
     patch_list = json.load(f)["patch_list"]

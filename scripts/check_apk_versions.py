@@ -4,8 +4,13 @@ logging.basicConfig(level=logging.WARNING)
 
 last = {}
 if os.path.exists("last-tags.json"):
-    with open("last-tags.json") as f:
-        last = json.load(f)
+    try:
+        with open("last-tags.json") as f:
+            content = f.read().strip()
+        if content:
+            last = json.loads(content)
+    except (json.JSONDecodeError, ValueError) as e:
+        logging.warning("last-tags.json is empty or corrupt, treating as {}: %s", e)
 
 with open("my-patch-config.json") as f:
     patch_list = json.load(f)["patch_list"]
