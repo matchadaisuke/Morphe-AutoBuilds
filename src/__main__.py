@@ -162,11 +162,17 @@ def _patch_morphe(
     enables: list[str],
     disables: list[str],
 ) -> None:
-    """Patch using Morphe CLI."""
+    """Patch using Morphe CLI.
+
+    --continue-on-error is passed so that individual patch fingerprint failures
+    (e.g. upstream patch not yet updated for the latest APK version) do not
+    abort the entire build.
+    """
     cmd = [
         "java", "-jar", str(cli),
         "patch", "--patches", str(bundle),
         "--out", str(output_apk),
+        "--continue-on-error",
         *disables, *enables,
         str(input_apk),
     ]
@@ -180,6 +186,7 @@ def _patch_morphe(
             "--patches", str(bundle),
             "--input",   str(input_apk),
             "--output",  str(output_apk),
+            "--continue-on-error",
         ], stream=True)
 
 
