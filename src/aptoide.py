@@ -1,5 +1,6 @@
 import base64
 import logging
+import re
 from typing import Dict
 from src import session
 
@@ -86,7 +87,8 @@ def get_download_link(version: str, app_name: str, config: Dict) -> str:
         if not items:
             raise ValueError(f"aptoide: version '{version}' not found for package '{package}'")
         found_vername = items[0]['file'].get('vername', '')
-        if found_vername != version:
+        normalized = _normalize_vername(found_vername)
+        if normalized != version:
             raise ValueError(
                 f"aptoide: version '{version}' not available for package '{package}' "
                 f"(search returned '{found_vername}' instead)"
@@ -100,6 +102,21 @@ def get_download_link(version: str, app_name: str, config: Dict) -> str:
     res_meta = session.get(url_meta)
     res_meta.raise_for_status()
     return res_meta.json()['data']['file']['path']
+
+def _normalize_vername(vername: str) -> str:
+    """Normalize Aptoide vername for comparison.
+    
+    Aptoide's search API sometimes returns vername in the format
+    "87100 (8.7.1)" where the first token is a version code and the
+    parenthesised part is the human-readable version string.  Strip the
+    leading vercode token so the result can be compared against a plain
+    semantic version like "8.7.1".
+    """
+    m = re.search(r'\(([^)]+)\)\s*$', vername)
+    if m:
+        return m.group(1)
+    return vername
+
 
 def _get_q_param(arch: str) -> str:
     if arch == 'universal':
