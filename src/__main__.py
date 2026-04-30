@@ -13,13 +13,16 @@ Supported patching systems
 Morphe CLI  (.mpp patch bundle)
   patch --patches <bundle> --out <out> [flags] <input>
 
-ReVanced CLI v4.x  (revanced-cli-4.*.jar)
-  list-patches <bundle>
-  patch -b <bundle> --out <out> [--exclusive] [-e "Name"] [-d "Name"] <input>
+ReVanced CLI v4.x  (revanced-cli-4.*.jar)  [patcher v17-v19]
+  patch -b <bundle> --out <out> [--exclusive] [-i "Name"] [-e "Name"] <input>
+  (-i = --include, -e = --exclude)
 
-ReVanced CLI v5+   (revanced-cli-5.*.jar, revanced-cli-6.*.jar, …)
-  list-patches <bundle>
+ReVanced CLI v5.x  (revanced-cli-5.*.jar)  [patcher v21]  ← use for YuzuMikan404
   patch -b <bundle> --out <out> [--exclusive] [-e "Name"] [-d "Name"] <input>
+  (-e = --enable, -d = --disable)
+
+ReVanced CLI v6+   (revanced-cli-6.*.jar)  [patcher v22 — INCOMPATIBLE with v21 patches]
+  Same flags as v5, but patch bundles built against patcher v21 will fail to load.
 
 ReVanced CLI legacy / v3  (any other *-all.jar)
   patch --patches <bundle> --out <out> [-i "Name"] [-e "Name"] <input>
@@ -47,7 +50,13 @@ from src import downloader, utils
 # ---------------------------------------------------------------------------
 
 def _cli_version(cli: Path) -> str:
-    """Return a simple version tag: 'morphe', 'v4', 'v5plus', or 'legacy'."""
+    """Return a simple version tag: 'morphe', 'v4', 'v5plus', or 'legacy'.
+
+    Patcher compatibility:
+      CLI v4.x  → patcher v17-v19  (old Patch<BytecodeContext> class style)
+      CLI v5.x  → patcher v21      (bytecodePatch DSL)
+      CLI v6.x+ → patcher v22+     (BREAKING: incompatible with v21 patches)
+    """
     name = cli.name.lower()
     if "morphe" in name:
         return "morphe"
@@ -55,7 +64,19 @@ def _cli_version(cli: Path) -> str:
     m = re.search(r"revanced-cli-(\d+)\.", name)
     if m:
         major = int(m.group(1))
-        return "v4" if major == 4 else "v5plus"
+        if major == 4:
+            return "v4"
+        if major >= 6:
+            # CLI v6+ uses patcher v22 which is incompatible with patches built
+            # against patcher v21 (e.g. YuzuMikan404/linegms-fork-second-).
+            # Pin revanced-cli to v5.x in sources/<source>.json to avoid this.
+            logging.warning(
+                "⚠️  CLI major version is %d (patcher v22+). "
+                "Patches built against patcher v21 (e.g. YuzuMikan404) will NOT work. "
+                "Pin 'revanced-cli' to 'v5.0.1' in your sources JSON.",
+                major,
+            )
+        return "v5plus"
     # Fallback: any *-all.jar that doesn't carry an explicit version number
     return "legacy"
 
@@ -71,20 +92,35 @@ def _parse_patch_flags(
     Read a patches/<app>-<source>.txt file and return
     (enable_flags, disable_flags) ready to be spliced into a CLI command.
 
-    For Morphe / legacy ReVanced:
-      enable  → -i "Name"
-      disable → -e "Name"
+    For Morphe / legacy ReVanced (v3):
+      enable  → -i "Name"   (--include)
+      disable → -e "Name"   (--exclude)
 
-    For ReVanced v4 / v5+:
-      enable  → -e "Name"   (enable)
-      disable → -d "Name"   (disable)
+    For ReVanced v4.x:
+      enable  → -i "Name"   (--include)
+      disable → -d "Name"   (--disable / not used in v4 but harmless)
+      NOTE: In v4, -e means --exclude (not enable!).
+            Use -i to include, and --exclusive to suppress all others.
+
+    For ReVanced v5+:
+      enable  → -e "Name"   (--enable)
+      disable → -d "Name"   (--disable)
     """
     if not patches_txt.exists():
         return [], []
 
-    use_revanced_flags = cli_ver in ("v4", "v5plus")
-    enable_flag  = "-e" if use_revanced_flags else "-i"
-    disable_flag = "-d" if use_revanced_flags else "-e"
+    if cli_ver == "v4":
+        # v4: -i = --include (add patch), -e = --exclude (remove patch, NOT enable!)
+        enable_flag  = "-i"
+        disable_flag = "-e"
+    elif cli_ver == "v5plus":
+        # v5+: -e = --enable, -d = --disable
+        enable_flag  = "-e"
+        disable_flag = "-d"
+    else:
+        # morphe / legacy (v3): -i = include, -e = exclude
+        enable_flag  = "-i"
+        disable_flag = "-e"
 
     enables:  list[str] = []
     disables: list[str] = []
@@ -158,8 +194,8 @@ def _patch_revanced(
     """
     Patch using ReVanced CLI v4 or v5+.
 
-    Both generations share the same public interface from v4 onward:
-      patch -b <bundle> [--exclusive] [-e "Name"] [-d "Name"] --out <out> <input>
+    v4.x: patch -b <bundle> [--exclusive] [-i "Name"] [-e "Name"] --out <out> <input>
+    v5+:  patch -b <bundle> [--exclusive] [-e "Name"] [-d "Name"] --out <out> <input>
     """
     _log_available_patches(cli, bundle)
     logging.info("enable_patches=%s  disable_patches=%s", enables, disables)
