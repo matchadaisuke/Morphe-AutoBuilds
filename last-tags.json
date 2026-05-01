@@ -19,5 +19,13 @@
   "apk_disney-plus": "26.6.0",
   "apk_crunchyroll": "3.99.3",
   "apk_photomath": "8.47.1",
-  "apk_pixiv": "6.180.1"
+  "apk_pixiv": "6.180.1",
+  "morphe": "v1.25.0-dev.11",
+  "anddea": "v4.0.0",
+  "piko": "v3.3.0-dev.3",
+  "hoo": "v1.29.0-dev.2",
+  "rookie": "v1.0.3",
+  "tosox": "v1.6.0",
+  "yuzu": "v1.0",
+  "dropped": "v1.5.1"
 }
