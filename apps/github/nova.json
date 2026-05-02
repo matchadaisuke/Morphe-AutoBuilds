@@ -1,0 +1,9 @@
+{
+    "user": "matchadaisuke",
+    "repo": "nova-apk",
+    "tag": "latest",
+    "asset_pattern": "nova-*.apk",
+    "asset_exclude": ".TV.",
+    "package": "com.teslacoilsw.launcher",
+    "version": ""
+}
